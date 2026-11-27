@@ -1,6 +1,6 @@
 # Code Patch STEM — Member Documentation System
 
-A database-backed web application for the **Code Patch STEM — South Brunswick High School (SBHS) chapter**. Members keep their
+A database-backed web application for the **Code Patch STEM SB Chapter**. Members keep their
 **Member Documentation** and **Member — Volunteer Hours Record** (both reproduced from the chapter's official PDF) in one place;
 the chapter administrator manages members, every document, an append-only edit history, and real-time notifications.
 

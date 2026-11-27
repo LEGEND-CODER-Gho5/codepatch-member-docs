@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     default: "Code Patch STEM — Member Documentation",
     template: "%s · Code Patch STEM",
   },
-  description: "Member documentation and volunteer-hours records for the Code Patch STEM SBHS chapter.",
+  description: "Member documentation and volunteer-hours records for the Code Patch STEM SB Chapter.",
   robots: { index: false, follow: false },
 };
 

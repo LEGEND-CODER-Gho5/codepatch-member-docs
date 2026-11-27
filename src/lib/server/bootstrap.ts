@@ -2,6 +2,7 @@ import "server-only";
 import { withTransaction } from "./db";
 import { hashPassword } from "./security";
 import { recordAudit } from "./audit";
+import { DEFAULT_CHAPTER_NAME } from "@/lib/document-text";
 
 // Initial configuration only — the administrator can rename, add, or remove
 // departments and positions afterwards. No member records are ever seeded.
@@ -34,9 +35,11 @@ async function run(): Promise<boolean> {
 
   return withTransaction(async (tx) => {
     const inserted = await tx.query(
-      `INSERT INTO application_settings (id, site_password_hash, admin_password_hash)
-       VALUES (1, $1, $2) ON CONFLICT (id) DO NOTHING RETURNING id`,
-      [siteHash, adminHash],
+      // The chapter name is set here rather than taken from the column default in migration 1,
+      // which still holds the original name (applied migrations are never edited).
+      `INSERT INTO application_settings (id, site_password_hash, admin_password_hash, chapter_name)
+       VALUES (1, $1, $2, $3) ON CONFLICT (id) DO NOTHING RETURNING id`,
+      [siteHash, adminHash, DEFAULT_CHAPTER_NAME],
     );
     if (inserted.length === 0) return true;
 

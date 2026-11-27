@@ -2,7 +2,7 @@
   "name": "codepatch-member-docs",
   "version": "1.0.0",
   "private": true,
-  "description": "Code Patch STEM (SBHS Chapter) member documentation management system",
+  "description": "Code Patch STEM (SB Chapter) member documentation management system",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

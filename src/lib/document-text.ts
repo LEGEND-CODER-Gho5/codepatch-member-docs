@@ -44,7 +44,7 @@ export const PDF_TEXT = {
 
 /** Default organization values exactly as printed in the PDF. */
 export const DEFAULT_ORGANIZATION_NAME = "Code Patch STEM";
-export const DEFAULT_CHAPTER_NAME = "South Brunswick High School (SBHS)";
+export const DEFAULT_CHAPTER_NAME = "SB Chapter";
 
 /**
  * The PDF's temporary editing instruction, used only as on-screen guidance in the

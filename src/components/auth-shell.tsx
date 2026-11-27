@@ -25,7 +25,7 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
         <div className="max-w-[360px]">
           <p className="text-[11.5px] font-semibold tracking-[0.12em] text-brand-300 uppercase">Member Documentation System</p>
           <p className="mt-3 text-[22px] leading-snug font-medium text-white">
-            Contributions and volunteer hours for the {org.chapterName} chapter.
+            Contributions and volunteer hours for {org.organizationName}, {org.chapterName}.
           </p>
           <ol className="mt-10 space-y-6 border-l border-white/10 pl-6">
             {STEPS.map((item, index) => {
