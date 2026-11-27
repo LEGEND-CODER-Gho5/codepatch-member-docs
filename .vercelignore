@@ -1,0 +1,10 @@
+# Files never uploaded to Vercel by `vercel deploy`.
+# Secrets and local data stay on this computer; Vercel installs and builds from source.
+.env*
+.data/
+.claude/
+.next/
+node_modules/
+*.pem
+*.crt
+*.key
