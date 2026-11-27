@@ -49,7 +49,10 @@ export default async function AdminOverviewPage() {
     {
       label: "Volunteer hours recorded",
       value: formatHours(stats.totalHours),
-      detail: `Across ${formatCount(stats.documentRecords)} documentation records`,
+      detail:
+        stats.recordsToVerify > 0
+          ? `${formatHours(stats.verifiedHours)} verified · ${formatCount(stats.recordsToVerify)} record${stats.recordsToVerify === 1 ? "" : "s"} to verify`
+          : `${formatHours(stats.verifiedHours)} verified · across ${formatCount(stats.documentRecords)} records`,
       href: "/admin/documentation",
     },
   ];

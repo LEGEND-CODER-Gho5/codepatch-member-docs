@@ -27,7 +27,8 @@ import { renderDocumentHtml } from "@/lib/export/document-html";
 import { buildExportModel, exportFileName } from "@/lib/export/document-model";
 import { formatHours, formatPlainDate, formatTime, todayInAppTimeZone } from "@/lib/format";
 import { cleanHours, LIMITS } from "@/lib/validation";
-import type { ActingAs, DocumentRecord, EntryKind, HeaderField, OrgInfo, WorkspaceMember } from "@/lib/types";
+import { VERIFIER_FIELDS, type ActingAs, type DocumentRecord, type EntryKind, type HeaderField, type OrgInfo, type WorkspaceMember } from "@/lib/types";
+import { VerificationBar } from "./verification-bar";
 
 type RowValues = Record<string, string>;
 type LocalRow = { key: string; id: string | null; values: RowValues; error: string | null };
@@ -346,18 +347,29 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
     },
   });
 
-  const headerInput = (field: HeaderField, options: { placeholder?: string; type?: "text" | "date"; signature?: boolean; label: string }) => (
-    <input
-      type={options.type ?? "text"}
-      value={header[field]}
-      onChange={(event) => setHeaderField(field, event.target.value)}
-      placeholder={options.placeholder}
-      aria-label={options.label}
-      maxLength={field === "period" ? LIMITS.period : LIMITS.shortField}
-      className={cn(lineInputClass, options.type === "date" && "max-w-[220px]", options.signature && "font-serif text-[15px] italic")}
-      {...focusProps(`h:${field}`)}
-    />
-  );
+  const headerInput = (field: HeaderField, options: { placeholder?: string; type?: "text" | "date"; signature?: boolean; label: string }) => {
+    // The supervisor signature and its date belong to the verifier: members see them read-only.
+    const verifierOnly = actingAs === "member" && VERIFIER_FIELDS.includes(field);
+    return (
+      <input
+        type={options.type ?? "text"}
+        value={header[field]}
+        onChange={(event) => setHeaderField(field, event.target.value)}
+        placeholder={verifierOnly ? "Filled in by the administrator" : options.placeholder}
+        aria-label={options.label}
+        readOnly={verifierOnly}
+        title={verifierOnly ? "Filled in by the administrator" : undefined}
+        maxLength={field === "period" ? LIMITS.period : LIMITS.shortField}
+        className={cn(
+          lineInputClass,
+          options.type === "date" && "max-w-[220px]",
+          options.signature && "font-serif text-[15px] italic",
+          verifierOnly && "cursor-not-allowed text-zinc-500 placeholder:not-italic placeholder:font-sans placeholder:text-[13px]",
+        )}
+        {...(verifierOnly ? {} : focusProps(`h:${field}`))}
+      />
+    );
+  };
 
   /* ------------------------------ Export (PDF, Google Docs) ------------------------------ */
   const [exporting, setExporting] = useState<"pdf" | "docs" | null>(null);
@@ -426,6 +438,12 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
           administrator action.
         </div>
       )}
+      <VerificationBar
+        documentId={record.id}
+        verification={record.verification}
+        actingAs={actingAs}
+        label={kind === "contribution" ? "Member Documentation" : "Volunteer Hours Record"}
+      />
 
       {/* ----------------------------- Interactive sheet ----------------------------- */}
       <article className="rounded-md border border-zinc-200 bg-surface px-5 py-8 shadow-sheet sm:px-12 sm:py-12 print:hidden">

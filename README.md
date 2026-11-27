@@ -53,6 +53,7 @@ All three are verified on the server, stored only as scrypt hashes, and versione
 - **Administrator dashboard** — Overview (live statistics, recent member activity, notifications, department totals), Member Management (search; department, position, and status filters; add, edit, deactivate/reactivate, delete, reset password), Documentation Management (per-member view and an all-entries feed with filters; open and edit any record without a member password; version history and restore), Edit History, Notifications, Department Management, and Settings.
 - **Add Member** — validates input, creates the member with a unique ID (`CPS-1001`, …), generates a ~70-bit random password (shown once with a copy button; the dialog cannot be dismissed until the password is acknowledged), hashes it, issues both documents, and updates the directory, counts, and statistics immediately.
 - **Edit History (audit log)** — every documentation, hours, account, password, department, position, and settings change, with actor, actor type, member, department, action, document, server timestamp (shown in America/New_York), and previous/new versions with a word-level diff. Filters: member search, department, action, document type, date range, actor type, sort order. Consecutive saves by the same person on the same record are grouped into one editing session so the log stays readable: a save joins the session while it comes within 10 minutes of the previous save and within 30 minutes of the session's first save; otherwise it starts a new entry.
+- **Verification (sign-off)** — the administrator checks a record and presses **Verify this record**; it then shows "Verified by … · date" to the administrator and the member, in the records list, in Documentation Management (with a **Needs verification** filter and "to verify" counts), on Overview (verified hours), and in the spreadsheet export. If the member changes a verified record (a field or any entry), the verification is removed in the same transaction, Edit History records it, and the administrator is notified to check it again; the administrator's own changes keep it, and **Remove verification** clears it. Members can't delete a verified record, and the Supervisor Signature and its Date are filled in by the administrator only (read-only for members, enforced on the server).
 - **Backups** — Admin → Backups: download a **spreadsheet** (.xlsx: members, records, volunteer hours, contributions, meetings, attendance, departments; no passwords) or a **full backup** (.json: everything needed to rebuild the site). On the live site a full backup is also saved every night at about 3 AM (and on **Back up now**) to a private Vercel Blob store, separate from the database; the last 30 days are kept plus the first backup of each month for 12 months. The nightly run also keeps a free Supabase project from pausing. See [Backups and restore](#backups-and-restore).
 - **Notifications** — generated in the same database transaction as member changes and account/security events (including sign-in lockouts), delivered in real time with an unread counter, dropdown, toast, full page, and mark read/unread/all.
 
@@ -83,7 +84,7 @@ Defined in [`src/lib/server/migrations.ts`](src/lib/server/migrations.ts) (`npm 
 | `member_departments` | Other departments a member also belongs to (never the main one) |
 | `meetings`, `meeting_attendance` | Attendance taken by the administrator: who attended, hours credited, and the volunteer-hours entry it added |
 | `member_credentials` | Member password hash, version, last sign-in |
-| `member_documentation` | Both document types: period, verification fields, submission dates |
+| `member_documentation` | Both document types: period, verification fields, submission dates, and the administrator's sign-off (`verified_at`, `verified_by_name`) |
 | `contribution_entries` | Dated contribution entries of a Member Documentation |
 | `volunteer_hours` | Date / description / hours rows (totals are always calculated with `SUM`) |
 | `audit_logs` | Append-only history with name snapshots and no foreign keys, so it survives deletions |
@@ -293,8 +294,8 @@ renames an automatically created sequence or index whose name is taken, and `CRE
 existing `schema_migrations` table, so every clash is a STOP. Step 7 catches a standalone type (such as an enum) with one of those
 names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names; migration 4 adds the
 `member_departments` table and its two indexes, migration 5 only adds columns, and migration 6 adds the `meetings` and
-`meeting_attendance` tables and their indexes, migration 7 adds columns and the `meetings_one_live_idx` index, and migration 8 adds the `maintenance_status` table (all
-included above).
+`meeting_attendance` tables and their indexes, migration 7 adds columns and the `meetings_one_live_idx` index, migration 8 adds the `maintenance_status` table (all
+included above), and migration 9 only adds columns.
 
 1. **Connection strings.** In the Supabase dashboard, open **Connect** and copy two Supavisor pooler URIs: the **session pooler**
    (port `5432`, for running migrations) and the **transaction pooler** (port `6543`, for the deployed app). The user name has the

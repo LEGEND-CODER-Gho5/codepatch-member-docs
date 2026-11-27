@@ -41,6 +41,12 @@ export const DOCUMENT_FIELDS: Record<DocumentType, readonly HeaderField[]> = {
 
 export const DATE_FIELDS: readonly HeaderField[] = ["date_submitted", "verification_date"];
 
+/** Fields only the administrator (the verifier) fills in; members see them read-only. */
+export const VERIFIER_FIELDS: readonly HeaderField[] = ["supervisor_signature", "verification_date"];
+
+/** The administrator's sign-off on a record, or null when it is not verified. */
+export type Verification = { at: string; byName: string } | null;
+
 export type OrgInfo = {
   organizationName: string;
   chapterName: string;
@@ -85,6 +91,7 @@ export type DocumentRecord = {
   updatedAt: string;
   lastEditedByType: ActorType | null;
   lastEditedByName: string | null;
+  verification: Verification;
   contributions: ContributionEntry[];
   hours: HoursEntry[];
 };
@@ -99,6 +106,7 @@ export type DocumentSummary = {
   hoursTotal: number;
   lastEditedByType: ActorType | null;
   lastEditedByName: string | null;
+  verification: Verification;
 };
 
 export type AuditListItem = {

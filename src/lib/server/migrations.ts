@@ -568,6 +568,18 @@ END;
 $$;
 `,
   },
+  {
+    version: 9,
+    name: "record_verification",
+    sql: /* sql */ `
+-- The administrator's sign-off on a record. Set by "Verify this record";
+-- cleared when the administrator removes it or when the member changes the
+-- record afterwards (it then needs verifying again).
+ALTER TABLE member_documentation
+  ADD COLUMN verified_at timestamptz,
+  ADD COLUMN verified_by_name text;
+`,
+  },
 ];
 
 /* ------------------------------------------------------------------------- */

@@ -13,6 +13,7 @@ import type {
   HoursEntry,
   MemberStatus,
   NotificationItem,
+  Verification,
   WorkspaceMember,
 } from "@/lib/types";
 
@@ -220,8 +221,11 @@ export async function listDocumentSummaries(memberId: string): Promise<DocumentS
     hours_total: number;
     last_edited_by_type: ActorType | null;
     last_edited_by_name: string | null;
+    verified_at: Date | null;
+    verified_by_name: string | null;
   }>(
     `SELECT d.id, d.document_type, d.period, d.created_at, d.updated_at, d.last_edited_by_type, d.last_edited_by_name,
+            d.verified_at, d.verified_by_name,
             CASE WHEN d.document_type = 'member_documentation'
                  THEN (SELECT count(*) FROM contribution_entries e WHERE e.document_id = d.id)
                  ELSE (SELECT count(*) FROM volunteer_hours h WHERE h.document_id = d.id) END AS entry_count,
@@ -241,7 +245,13 @@ export async function listDocumentSummaries(memberId: string): Promise<DocumentS
     hoursTotal: Number(row.hours_total),
     lastEditedByType: row.last_edited_by_type,
     lastEditedByName: row.last_edited_by_name,
+    verification: verificationOf(row),
   }));
+}
+
+/** The administrator's sign-off stored on a record row. */
+function verificationOf(row: { verified_at: Date | null; verified_by_name: string | null }): Verification {
+  return row.verified_at ? { at: iso(row.verified_at), byName: row.verified_by_name || "Administrator" } : null;
 }
 
 export async function getDocumentRecord(documentId: string): Promise<DocumentRecord | null> {
@@ -261,6 +271,8 @@ export async function getDocumentRecord(documentId: string): Promise<DocumentRec
     updated_at: Date;
     last_edited_by_type: ActorType | null;
     last_edited_by_name: string | null;
+    verified_at: Date | null;
+    verified_by_name: string | null;
   }>("SELECT * FROM member_documentation WHERE id = $1", [documentId]);
   if (!doc) return null;
 
@@ -311,6 +323,7 @@ export async function getDocumentRecord(documentId: string): Promise<DocumentRec
     updatedAt: iso(doc.updated_at),
     lastEditedByType: doc.last_edited_by_type,
     lastEditedByName: doc.last_edited_by_name,
+    verification: verificationOf(doc),
     contributions,
     hours,
   };
@@ -389,6 +402,10 @@ export type OverviewStats = {
   documentRecords: number;
   totalHours: number;
   unreadNotifications: number;
+  /** Hours in verified Volunteer Hours Records. */
+  verifiedHours: number;
+  /** Records with entries that are not verified (yet, or again after a member's change). */
+  recordsToVerify: number;
 };
 
 export async function getOverviewStats(): Promise<OverviewStats> {
@@ -401,7 +418,12 @@ export async function getOverviewStats(): Promise<OverviewStats> {
        (SELECT count(*) FROM volunteer_hours) AS hours_entries,
        (SELECT count(*) FROM member_documentation) AS document_records,
        (SELECT coalesce(sum(hours), 0) FROM volunteer_hours) AS total_hours,
-       (SELECT count(*) FROM notifications WHERE read_at IS NULL) AS unread_notifications`,
+       (SELECT count(*) FROM notifications WHERE read_at IS NULL) AS unread_notifications,
+       (SELECT coalesce(sum(h.hours), 0) FROM volunteer_hours h JOIN member_documentation d ON d.id = h.document_id
+         WHERE d.verified_at IS NOT NULL) AS verified_hours,
+       (SELECT count(*) FROM member_documentation d WHERE d.verified_at IS NULL
+         AND (EXISTS (SELECT 1 FROM volunteer_hours h WHERE h.document_id = d.id)
+              OR EXISTS (SELECT 1 FROM contribution_entries e WHERE e.document_id = d.id))) AS records_to_verify`,
   );
   return {
     activeMembers: Number(row?.active_members ?? 0),
@@ -412,6 +434,8 @@ export async function getOverviewStats(): Promise<OverviewStats> {
     documentRecords: Number(row?.document_records ?? 0),
     totalHours: Number(row?.total_hours ?? 0),
     unreadNotifications: Number(row?.unread_notifications ?? 0),
+    verifiedHours: Number(row?.verified_hours ?? 0),
+    recordsToVerify: Number(row?.records_to_verify ?? 0),
   };
 }
 
@@ -634,6 +658,11 @@ export type DocumentationOverviewRow = {
   hoursTotal: number;
   documentationUpdatedAt: string | null;
   hoursUpdatedAt: string | null;
+  /** Records with at least one entry that the administrator has not verified (yet, or again). */
+  documentationToVerify: number;
+  hoursToVerify: number;
+  /** Hours in verified Volunteer Hours Records. */
+  verifiedHours: number;
 };
 
 export async function getDocumentationOverview(): Promise<DocumentationOverviewRow[]> {
@@ -653,8 +682,17 @@ export async function getDocumentationOverview(): Promise<DocumentationOverviewR
     contribution_count: number;
     hours_entry_count: number;
     hours_total: number;
+    md_to_verify: number;
+    vh_to_verify: number;
+    verified_hours: number;
   }>(
     `SELECT m.id, m.member_number, m.full_name, m.status, m.department_id, d.name AS department_name, p.name AS position_name,
+            count(md.id) FILTER (WHERE md.document_type = 'member_documentation' AND md.verified_at IS NULL
+              AND EXISTS (SELECT 1 FROM contribution_entries e WHERE e.document_id = md.id)) AS md_to_verify,
+            count(md.id) FILTER (WHERE md.document_type = 'volunteer_hours_record' AND md.verified_at IS NULL
+              AND EXISTS (SELECT 1 FROM volunteer_hours h WHERE h.document_id = md.id)) AS vh_to_verify,
+            (SELECT coalesce(sum(h.hours), 0) FROM volunteer_hours h JOIN member_documentation vd ON vd.id = h.document_id
+              WHERE h.member_id = m.id AND vd.verified_at IS NOT NULL) AS verified_hours,
             count(md.id) FILTER (WHERE md.document_type = 'member_documentation') AS md_records,
             count(md.id) FILTER (WHERE md.document_type = 'volunteer_hours_record') AS vh_records,
             max(md.updated_at) FILTER (WHERE md.document_type = 'member_documentation') AS md_updated,
@@ -685,6 +723,9 @@ export async function getDocumentationOverview(): Promise<DocumentationOverviewR
     hoursTotal: Number(row.hours_total),
     documentationUpdatedAt: isoOrNull(row.md_updated),
     hoursUpdatedAt: isoOrNull(row.vh_updated),
+    documentationToVerify: Number(row.md_to_verify),
+    hoursToVerify: Number(row.vh_to_verify),
+    verifiedHours: Number(row.verified_hours),
   }));
 }
 

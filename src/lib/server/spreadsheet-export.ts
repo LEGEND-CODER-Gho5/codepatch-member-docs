@@ -12,7 +12,7 @@ import { buildWorkbook, type CellValue, type SheetSpec } from "./xlsx";
  * attendance — one tab each. It never contains passwords or password hashes.
  */
 export async function buildSpreadsheetExport(): Promise<Buffer> {
-  const [members, departments, records, hours, contributions, meetings, attendance] = await Promise.all([
+  const [members, departments, records, hours, contributions, meetings, attendance, verifiedHours] = await Promise.all([
     listMembers(),
     listDepartments(),
     sql<{
@@ -31,10 +31,12 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
       last_edited_by_name: string | null;
       created_at: Date;
       updated_at: Date;
+      verified_at: Date | null;
+      verified_by_name: string | null;
     }>(
       `SELECT m.member_number, m.full_name, doc.document_type, doc.period, doc.supervisor_name, doc.supervisor_position,
               doc.supervisor_signature, doc.member_confirmation, doc.date_submitted, doc.verification_date,
-              doc.last_edited_by_name, doc.created_at, doc.updated_at,
+              doc.last_edited_by_name, doc.created_at, doc.updated_at, doc.verified_at, doc.verified_by_name,
               CASE WHEN doc.document_type = 'volunteer_hours_record'
                    THEN (SELECT coalesce(sum(h.hours), 0) FROM volunteer_hours h WHERE h.document_id = doc.id) END AS hours_total,
               CASE WHEN doc.document_type = 'volunteer_hours_record'
@@ -54,8 +56,10 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
       hours: number | null;
       meeting_name: string | null;
       updated_at: Date;
+      record_verified: boolean;
     }>(
       `SELECT m.member_number, m.full_name, d.name AS department_name, doc.period, h.service_date, h.description, h.hours,
+              doc.verified_at IS NOT NULL AS record_verified,
               (SELECT mt.name FROM meeting_attendance ma JOIN meetings mt ON mt.id = ma.meeting_id
                 WHERE ma.volunteer_hours_id = h.id LIMIT 1) AS meeting_name,
               h.updated_at
@@ -114,7 +118,15 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
          JOIN members m ON m.id = ma.member_id
         ORDER BY mt.meeting_date DESC, mt.created_at DESC, lower(m.full_name)`,
     ),
+    sql<{ member_id: string; hours: number }>(
+      `SELECT h.member_id, coalesce(sum(h.hours), 0) AS hours
+         FROM volunteer_hours h JOIN member_documentation doc ON doc.id = h.document_id
+        WHERE doc.verified_at IS NOT NULL
+        GROUP BY h.member_id`,
+    ),
   ]);
+  const verifiedByMember = new Map(verifiedHours.map((row) => [row.member_id, Number(row.hours)]));
+  const yesNo = (value: boolean) => (value ? "Yes" : "No");
 
   const num = (value: number | null | undefined): CellValue => (value === null || value === undefined ? null : Number(value));
   const date = (value: string | null): CellValue => ({ date: value });
@@ -133,6 +145,7 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         { header: "Status", width: 10 },
         { header: "Start date", width: 12 },
         { header: "Total volunteer hours", width: 12 },
+        { header: "Verified hours", width: 12 },
         { header: "Hours entries", width: 10 },
         { header: "Contribution entries", width: 12 },
         { header: "Last sign-in", width: 22 },
@@ -148,6 +161,7 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         member.status === "active" ? "Active" : "Inactive",
         date(member.startDate),
         member.hoursTotal,
+        verifiedByMember.get(member.id) ?? 0,
         member.hoursEntryCount,
         member.contributionCount,
         time(member.lastLoginAt),
@@ -165,6 +179,7 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         { header: "Description", width: 44 },
         { header: "Hours", width: 8 },
         { header: "From meeting", width: 26 },
+        { header: "Record verified", width: 10 },
         { header: "Last changed", width: 22 },
       ],
       rows: hours.map((row) => [
@@ -176,6 +191,7 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         row.description,
         num(row.hours),
         row.meeting_name,
+        yesNo(row.record_verified === true),
         time(row.updated_at),
       ]),
     },
@@ -217,6 +233,9 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         { header: "Verification date", width: 12 },
         { header: "Total hours", width: 10 },
         { header: "Entries", width: 8 },
+        { header: "Verified", width: 10 },
+        { header: "Verified by", width: 22 },
+        { header: "Verified on", width: 22 },
         { header: "Last edited by", width: 22 },
         { header: "Last changed", width: 22 },
       ],
@@ -233,6 +252,9 @@ export async function buildSpreadsheetExport(): Promise<Buffer> {
         date(row.verification_date),
         num(row.hours_total),
         num(row.entry_count),
+        yesNo(row.verified_at !== null),
+        row.verified_by_name,
+        time(row.verified_at),
         row.last_edited_by_name,
         time(row.updated_at),
       ]),

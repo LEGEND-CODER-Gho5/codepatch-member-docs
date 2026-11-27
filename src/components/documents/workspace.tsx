@@ -1,6 +1,6 @@
-import { ArrowRight, FileText, Printer, Save, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, FileText, Printer, Save, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ActorBadge, EmptyState, Panel } from "@/components/ui/primitives";
+import { ActorBadge, Badge, EmptyState, Panel } from "@/components/ui/primitives";
 import { actionLabel } from "@/lib/audit-display";
 import { cn } from "@/lib/cn";
 import { DOCUMENT_TYPE_LABEL, PERIOD_LABEL } from "@/lib/document-text";
@@ -113,9 +113,19 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
                         active ? "border-brand-600 bg-brand-50/60" : "border-transparent hover:bg-zinc-50",
                       )}
                     >
-                      <p className={cn("truncate text-[13px] font-medium", summary.period ? "text-zinc-900" : "text-zinc-500 italic")}>
-                        {summary.period || "Period not set"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={cn("min-w-0 flex-1 truncate text-[13px] font-medium", summary.period ? "text-zinc-900" : "text-zinc-500 italic")}>
+                          {summary.period || "Period not set"}
+                        </p>
+                        {summary.verification ? (
+                          <Badge tone="success" className="shrink-0">
+                            <BadgeCheck className="size-3" aria-hidden />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <span className="shrink-0 text-[11.5px] text-zinc-400">Not verified</span>
+                        )}
+                      </div>
                       <p className="mt-0.5 text-[12px] text-zinc-500">
                         {activeType === "volunteer_hours_record"
                           ? `${formatHours(summary.hoursTotal)} hrs · ${summary.entryCount} ${summary.entryCount === 1 ? "row" : "rows"}`

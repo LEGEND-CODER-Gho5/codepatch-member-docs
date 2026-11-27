@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowRight, Clock, FileText, Search, UserRound } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock, FileText, Search, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Select } from "@/components/ui/field";
 import { useActionMenu } from "@/components/ui/gestures";
-import { EmptyState, StatusBadge, tableStyles } from "@/components/ui/primitives";
+import { Badge, EmptyState, StatusBadge, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDateShort, formatHours } from "@/lib/format";
 import type { DepartmentOption, MemberStatus } from "@/lib/types";
@@ -26,6 +26,9 @@ export type DocumentationRow = {
   hoursTotal: number;
   documentationUpdatedAt: string | null;
   hoursUpdatedAt: string | null;
+  documentationToVerify: number;
+  hoursToVerify: number;
+  verifiedHours: number;
 };
 
 export function DocumentationOverview({ rows, departments }: { rows: DocumentationRow[]; departments: DepartmentOption[] }) {
@@ -33,6 +36,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
   const [department, setDepartment] = useState("");
   const [type, setType] = useState<"" | "member_documentation" | "volunteer_hours_record">("");
   const [status, setStatus] = useState<"" | MemberStatus>("active");
+  const [verification, setVerification] = useState<"" | "needed">("");
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -40,9 +44,12 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
       (row) =>
         (!needle || row.fullName.toLowerCase().includes(needle) || row.memberCode.toLowerCase().includes(needle)) &&
         (!department || row.departmentId === department || row.otherDepartments.some((other) => other.id === department)) &&
-        (!status || row.status === status),
+        (!status || row.status === status) &&
+        (!verification ||
+          (type !== "volunteer_hours_record" && row.documentationToVerify > 0) ||
+          (type !== "member_documentation" && row.hoursToVerify > 0)),
     );
-  }, [rows, query, department, status]);
+  }, [rows, query, department, status, verification, type]);
 
   const showDocs = type !== "volunteer_hours_record";
   const showHours = type !== "member_documentation";
@@ -78,6 +85,15 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
           <option value="active">Active members</option>
           <option value="inactive">Inactive members</option>
           <option value="">All members</option>
+        </Select>
+        <Select
+          value={verification}
+          onChange={(event) => setVerification(event.target.value as "" | "needed")}
+          aria-label="Filter by verification"
+          className="w-48"
+        >
+          <option value="">Verified or not</option>
+          <option value="needed">Needs verification</option>
         </Select>
         <p className="ml-auto text-[12.5px] text-zinc-500">{filtered.length} members</p>
       </div>
@@ -119,6 +135,8 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
                         href={`/admin/documentation/${row.memberId}?type=member_documentation`}
                         primary={`${row.contributionCount} ${row.contributionCount === 1 ? "entry" : "entries"}`}
                         secondary={`${row.documentationRecords} record${row.documentationRecords === 1 ? "" : "s"}${row.documentationUpdatedAt ? ` · updated ${formatDateShort(row.documentationUpdatedAt)}` : ""}`}
+                        toVerify={row.documentationToVerify}
+                        hasEntries={row.contributionCount > 0}
                       />
                     </td>
                   )}
@@ -127,7 +145,9 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
                       <DocCell
                         href={`/admin/documentation/${row.memberId}?type=volunteer_hours_record`}
                         primary={`${formatHours(row.hoursTotal)} hours`}
-                        secondary={`${row.hoursEntryCount} row${row.hoursEntryCount === 1 ? "" : "s"}${row.hoursUpdatedAt ? ` · updated ${formatDateShort(row.hoursUpdatedAt)}` : ""}`}
+                        secondary={`${row.hoursEntryCount} row${row.hoursEntryCount === 1 ? "" : "s"} · ${formatHours(row.verifiedHours)} verified${row.hoursUpdatedAt ? ` · updated ${formatDateShort(row.hoursUpdatedAt)}` : ""}`}
+                        toVerify={row.hoursToVerify}
+                        hasEntries={row.hoursEntryCount > 0}
                       />
                     </td>
                   )}
@@ -141,11 +161,35 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
   );
 }
 
-function DocCell({ href, primary, secondary }: { href: string; primary: string; secondary: string }) {
+function DocCell({
+  href,
+  primary,
+  secondary,
+  toVerify,
+  hasEntries,
+}: {
+  href: string;
+  primary: string;
+  secondary: string;
+  toVerify: number;
+  hasEntries: boolean;
+}) {
   return (
     <Link href={href} className="group -mx-2 flex items-center gap-3 rounded-md px-2 py-1 transition-colors hover:bg-brand-50/60">
       <span className="min-w-0 flex-1">
-        <span className="tabular block font-medium text-zinc-900 group-hover:text-brand-800">{primary}</span>
+        <span className="flex items-center gap-2">
+          <span className="tabular font-medium text-zinc-900 group-hover:text-brand-800">{primary}</span>
+          {toVerify > 0 ? (
+            <Badge tone="warning">{toVerify} to verify</Badge>
+          ) : (
+            hasEntries && (
+              <Badge tone="success">
+                <BadgeCheck className="size-3" aria-hidden />
+                Verified
+              </Badge>
+            )
+          )}
+        </span>
         <span className="block truncate text-[12px] text-zinc-500">{secondary}</span>
       </span>
       <span className="flex items-center gap-1 text-[12px] font-medium text-brand-700 opacity-0 transition-opacity group-hover:opacity-100">

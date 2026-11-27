@@ -12,6 +12,8 @@ export const ACTION_LABELS: Record<string, string> = {
   locked_out: "Sign-in locked",
   downloaded: "Downloaded",
   failed: "Failed",
+  verified: "Verified",
+  unverified: "Verification removed",
 };
 
 export const ACTION_FILTER_OPTIONS = [
@@ -23,6 +25,8 @@ export const ACTION_FILTER_OPTIONS = [
   { value: "reactivated", label: "Reactivated" },
   { value: "password_reset", label: "Password changes" },
   { value: "locked_out", label: "Sign-in lockouts" },
+  { value: "verified", label: "Verified" },
+  { value: "unverified", label: "Verification removed" },
 ];
 
 export const DOCUMENT_FILTER_OPTIONS = [

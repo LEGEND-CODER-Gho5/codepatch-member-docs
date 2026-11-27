@@ -250,7 +250,16 @@ await check("A backup made before the latest migration restores and is then upgr
   const result = await restoreBackup(fresh, oldBackup, MIGRATIONS, RESTORE_OPTIONS);
   assert.deepEqual(result.appliedAfter, MIGRATIONS.filter((m) => m.version > 7).map((m) => m.version));
   await assertSchemaIsCurrent(fresh);
-  assert.deepEqual((await snapshot(fresh)).tables, (await snapshot(older)).tables);
+  // Every row is restored as it was; columns added by later migrations start empty.
+  const was = (await snapshot(older)).tables;
+  const now = (await snapshot(fresh)).tables;
+  for (const table of BACKUP_TABLES) {
+    const keys = Object.keys(was[table][0] ?? {});
+    const extra = Object.keys(now[table][0] ?? {}).filter((key) => !keys.includes(key));
+    assert.ok(now[table].every((row) => extra.every((key) => row[key] === null)), `${table}: new columns start empty`);
+    const pick = (rows) => rows.map((row) => Object.fromEntries(keys.map((key) => [key, row[key]])));
+    assert.deepEqual(pick(now[table]), pick(was[table]), `${table} differs`);
+  }
   await older.close();
   await fresh.close();
 });

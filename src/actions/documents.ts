@@ -1,7 +1,7 @@
 "use server";
 
 import { sqlOne, withTransaction, type Queryable } from "@/lib/server/db";
-import { getActorFor } from "@/lib/server/auth";
+import { getActorFor, getAdminActor } from "@/lib/server/auth";
 import { loadMemberRef, recordAudit, type Actor, type MemberRef } from "@/lib/server/audit";
 import { getSettings } from "@/lib/server/settings";
 import { cleanDate, cleanFreeText, cleanHours, isUuid, LIMITS } from "@/lib/validation";
@@ -14,6 +14,7 @@ import {
   type DocumentType,
   type EntryKind,
   type HeaderField,
+  VERIFIER_FIELDS,
 } from "@/lib/types";
 import { ActionError, fail, handleActionError, UNAUTHORIZED } from "./shared";
 
@@ -29,6 +30,8 @@ type DocRow = {
   date_submitted: string | null;
   verification_date: string | null;
   updated_at: Date;
+  verified_at: Date | null;
+  verified_by_name: string | null;
 };
 
 const FIELD_NAMES: Record<HeaderField, string> = {
@@ -120,6 +123,96 @@ function memberNotice(actor: Actor, member: MemberRef | null, type: string, desc
   return { type, description, link };
 }
 
+/* ---------------------------------- Verification ---------------------------------- */
+
+function describeVerification(row: { verified_at: Date | null; verified_by_name: string | null }) {
+  return row.verified_at ? `Verified by ${row.verified_by_name || "Administrator"}` : "Not verified";
+}
+
+/**
+ * A verified record stays verified only while it is exactly what the
+ * administrator checked. When a member changes a verified record, this clears
+ * the verification in the same transaction, records it in Edit History, and
+ * notifies the administrator. Changes by the administrator keep it. Call it
+ * before recording the change itself, so autosaves keep merging into one entry.
+ */
+async function clearVerificationAfterMemberChange(tx: Queryable, actor: Actor, documentId: string, member: MemberRef | null) {
+  if (actor.type !== "member") return;
+  const [before] = await tx.query<{ document_type: DocumentType; member_id: string; verified_at: Date | null; verified_by_name: string | null }>(
+    "SELECT document_type, member_id, verified_at, verified_by_name FROM member_documentation WHERE id = $1 FOR UPDATE",
+    [documentId],
+  );
+  if (!before?.verified_at) return;
+  await tx.query("UPDATE member_documentation SET verified_at = NULL, verified_by_name = NULL WHERE id = $1", [documentId]);
+  const label = DOCUMENT_TYPE_LABEL[before.document_type];
+  await recordAudit(tx, {
+    actor: { type: "system", id: "verification", name: "Verification" },
+    member,
+    action: "unverified",
+    entityType: "document",
+    documentType: before.document_type,
+    documentId,
+    recordId: documentId,
+    summary: `Verification removed: ${member?.fullName ?? "the member"} changed the verified ${label}`,
+    previous: { verification: describeVerification(before) },
+    next: { verification: "Not verified (changed by the member)" },
+    notification: {
+      type: "documentation.unverified",
+      description: `${member?.fullName ?? "A member"} changed their ${label} after you verified it. It needs verifying again.`,
+      link: documentLink(before.member_id, documentId, before.document_type),
+    },
+    realtime: ["member"],
+  });
+}
+
+async function setVerification(documentId: unknown, verify: boolean): Promise<ActionResult<{ verifiedAt: string | null }>> {
+  try {
+    if (!isUuid(documentId)) return fail("Invalid request.", "invalid");
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    const verifiedAt = await withTransaction(async (tx) => {
+      const [before] = await tx.query<DocRow>("SELECT * FROM member_documentation WHERE id = $1 FOR UPDATE", [documentId]);
+      if (!before) throw new ActionError("This document no longer exists.", "not_found");
+      if (Boolean(before.verified_at) === verify) return before.verified_at;
+      const [after] = await tx.query<DocRow>(
+        verify
+          ? "UPDATE member_documentation SET verified_at = now(), verified_by_name = $2 WHERE id = $1 RETURNING *"
+          : "UPDATE member_documentation SET verified_at = NULL, verified_by_name = NULL WHERE id = $1 RETURNING *",
+        verify ? [documentId, actor.name] : [documentId],
+      );
+      const member = await loadMemberRef(tx, before.member_id);
+      const label = DOCUMENT_TYPE_LABEL[before.document_type];
+      await recordAudit(tx, {
+        actor,
+        member,
+        action: verify ? "verified" : "unverified",
+        entityType: "document",
+        documentType: before.document_type,
+        documentId: before.id,
+        recordId: before.id,
+        summary: verify ? `Verified ${label} record` : `Removed the verification of a ${label} record`,
+        previous: { verification: describeVerification(before) },
+        next: { verification: describeVerification(after) },
+        realtime: ["member"],
+      });
+      return after.verified_at;
+    });
+    return { ok: true, data: { verifiedAt: verifiedAt ? new Date(verifiedAt).toISOString() : null } };
+  } catch (error) {
+    return handleActionError(error, verify ? "verifyDocument" : "unverifyDocument");
+  }
+}
+
+/** Administrator only: signs off a record as checked. */
+export async function verifyDocumentAction(input: { documentId: string }) {
+  return setVerification(input?.documentId, true);
+}
+
+/** Administrator only: removes the sign-off so the record shows as not verified. */
+export async function unverifyDocumentAction(input: { documentId: string }) {
+  return setVerification(input?.documentId, false);
+}
+
 /* --------------------------- Header & verification --------------------------- */
 
 export async function saveDocumentFieldsAction(input: {
@@ -144,6 +237,9 @@ export async function saveDocumentFieldsAction(input: {
     for (const [key, raw] of Object.entries(input.patch)) {
       if (!allowed.includes(key)) return fail("Invalid field.", "invalid");
       const field = key as HeaderField;
+      if (actor.type === "member" && VERIFIER_FIELDS.includes(field)) {
+        return fail("The supervisor signature and verification date are filled in by the administrator.", "invalid");
+      }
       const result = DATE_FIELDS.includes(field)
         ? cleanDate(raw, FIELD_NAMES[field])
         : cleanFreeText(raw, field === "period" ? LIMITS.period : LIMITS.shortField, FIELD_NAMES[field]);
@@ -167,6 +263,7 @@ export async function saveDocumentFieldsAction(input: {
       );
       const member = await loadMemberRef(tx, before.member_id);
       const label = DOCUMENT_TYPE_LABEL[before.document_type];
+      await clearVerificationAfterMemberChange(tx, actor, before.id, member);
       await recordAudit(tx, {
         actor,
         member,
@@ -232,6 +329,7 @@ export async function createEntryAction(input: {
       await touchDocument(tx, input.documentId, actor);
       const member = await loadMemberRef(tx, doc.member_id);
       const documentLabel = DOCUMENT_TYPE_LABEL[doc.document_type];
+      await clearVerificationAfterMemberChange(tx, actor, input.documentId, member);
       await recordAudit(tx, {
         actor,
         member,
@@ -298,6 +396,7 @@ export async function updateEntryAction(input: {
       await touchDocument(tx, entry.document_id, actor);
       const member = await loadMemberRef(tx, entry.member_id);
       const documentLabel = DOCUMENT_TYPE_LABEL[entry.document_type];
+      await clearVerificationAfterMemberChange(tx, actor, entry.document_id, member);
       await recordAudit(tx, {
         actor,
         member,
@@ -349,6 +448,7 @@ export async function deleteEntryAction(input: {
       await touchDocument(tx, entry.document_id, actor);
       const member = await loadMemberRef(tx, entry.member_id);
       const documentLabel = DOCUMENT_TYPE_LABEL[entry.document_type];
+      await clearVerificationAfterMemberChange(tx, actor, entry.document_id, member);
       await recordAudit(tx, {
         actor,
         member,
@@ -436,6 +536,10 @@ export async function deleteDocumentAction(input: { documentId: string; actingAs
     await withTransaction(async (tx) => {
       const [before] = await tx.query<DocRow>("SELECT * FROM member_documentation WHERE id = $1 FOR UPDATE", [input.documentId]);
       if (!before) return;
+      // Verified hours are kept: only the administrator can delete a verified record.
+      if (actor.type === "member" && before.verified_at) {
+        throw new ActionError("This record has been verified by the administrator, so it can't be deleted. Ask the administrator if it needs to go.", "conflict");
+      }
       const kind: EntryKind = before.document_type === "member_documentation" ? "contribution" : "hours";
       const config = ENTRY_CONFIG[kind];
       const children = await tx.query<Record<string, unknown>>(
