@@ -136,13 +136,22 @@
 :root {
   color-scheme: light dark;
 }
+@media screen {
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+}
 @media print {
   :root {
     color-scheme: light;
   }
 }
+/* Dark: when the device is dark and Light was not chosen (Display & accessibility). */
 @media screen and (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-surface: oklch(21% 0.006 286);
     --color-accent: #6b51a0;
     --color-accent-hover: #7a60b0;
@@ -219,12 +228,165 @@
     --color-sky-900: oklch(95.1% 0.026 236.824);
     --color-sky-950: oklch(97.7% 0.013 236.62);
   }
-  dialog::backdrop {
+  :root:not([data-theme="light"]) dialog::backdrop {
     background: rgba(0, 0, 0, 0.6);
   }
   /* Navigation chrome (sidebar, site header, sign-in panel) is already dark:
    * it keeps its original colors in both modes. */
-  .theme-fixed {
+  :root:not([data-theme="light"]) .theme-fixed {
+    --color-zinc-50: oklch(98.5% 0 none);
+    --color-zinc-100: oklch(96.7% 0.001 286.375);
+    --color-zinc-200: oklch(92% 0.004 286.32);
+    --color-zinc-300: oklch(87.1% 0.006 286.286);
+    --color-zinc-400: oklch(70.5% 0.015 286.067);
+    --color-zinc-500: oklch(55.2% 0.016 285.938);
+    --color-zinc-600: oklch(44.2% 0.017 285.786);
+    --color-zinc-700: oklch(37% 0.013 285.805);
+    --color-zinc-800: oklch(27.4% 0.006 286.033);
+    --color-zinc-900: oklch(21% 0.006 285.885);
+    --color-zinc-950: oklch(14.1% 0.005 285.823);
+    --color-brand-50: #f6f3fa;
+    --color-brand-100: #ece6f4;
+    --color-brand-200: #d8cce8;
+    --color-brand-300: #b9a5d5;
+    --color-brand-400: #9478bb;
+    --color-brand-500: #70539d;
+    --color-brand-600: #593f84;
+    --color-brand-700: #48326d;
+    --color-brand-800: #382756;
+    --color-brand-900: #2a1d41;
+    --color-brand-950: #1b122b;
+    --color-red-50: oklch(97.1% 0.013 17.38);
+    --color-red-100: oklch(93.6% 0.032 17.717);
+    --color-red-200: oklch(88.5% 0.062 18.334);
+    --color-red-300: oklch(80.8% 0.114 19.571);
+    --color-red-400: oklch(70.4% 0.191 22.216);
+    --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-red-600: oklch(57.7% 0.245 27.325);
+    --color-red-700: oklch(50.5% 0.213 27.518);
+    --color-red-800: oklch(44.4% 0.177 26.899);
+    --color-red-900: oklch(39.6% 0.141 25.723);
+    --color-red-950: oklch(25.8% 0.092 26.042);
+    --color-amber-50: oklch(98.7% 0.022 95.277);
+    --color-amber-100: oklch(96.2% 0.059 95.617);
+    --color-amber-200: oklch(92.4% 0.12 95.746);
+    --color-amber-300: oklch(87.9% 0.169 91.605);
+    --color-amber-400: oklch(82.8% 0.189 84.429);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-600: oklch(66.6% 0.179 58.318);
+    --color-amber-700: oklch(55.5% 0.163 48.998);
+    --color-amber-800: oklch(47.3% 0.137 46.201);
+    --color-amber-900: oklch(41.4% 0.112 45.904);
+    --color-amber-950: oklch(27.9% 0.077 45.635);
+    --color-emerald-50: oklch(97.9% 0.021 166.113);
+    --color-emerald-100: oklch(95% 0.052 163.051);
+    --color-emerald-200: oklch(90.5% 0.093 164.15);
+    --color-emerald-300: oklch(84.5% 0.143 164.978);
+    --color-emerald-400: oklch(76.5% 0.177 163.223);
+    --color-emerald-500: oklch(69.6% 0.17 162.48);
+    --color-emerald-600: oklch(59.6% 0.145 163.225);
+    --color-emerald-700: oklch(50.8% 0.118 165.612);
+    --color-emerald-800: oklch(43.2% 0.095 166.913);
+    --color-emerald-900: oklch(37.8% 0.077 168.94);
+    --color-emerald-950: oklch(26.2% 0.051 172.552);
+    --color-sky-50: oklch(97.7% 0.013 236.62);
+    --color-sky-100: oklch(95.1% 0.026 236.824);
+    --color-sky-200: oklch(90.1% 0.058 230.902);
+    --color-sky-300: oklch(82.8% 0.111 230.318);
+    --color-sky-400: oklch(74.6% 0.16 232.661);
+    --color-sky-500: oklch(68.5% 0.169 237.323);
+    --color-sky-600: oklch(58.8% 0.158 241.966);
+    --color-sky-700: oklch(50% 0.134 242.749);
+    --color-sky-800: oklch(44.3% 0.11 240.79);
+    --color-sky-900: oklch(39.1% 0.09 240.876);
+    --color-sky-950: oklch(29.3% 0.066 243.157);
+  }
+}
+/* Dark: when Dark was chosen, whatever the device says. */
+@media screen {
+  :root[data-theme="dark"] {
+    --color-surface: oklch(21% 0.006 286);
+    --color-accent: #6b51a0;
+    --color-accent-hover: #7a60b0;
+    --color-accent-active: #5d458e;
+    --color-danger: oklch(52% 0.19 25.5);
+    --color-danger-hover: oklch(57% 0.2 25.5);
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    --shadow-raised: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-sheet: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.6);
+    --color-zinc-50: oklch(18.5% 0.005 286);
+    --color-zinc-100: oklch(16% 0.005 286);
+    --color-zinc-200: oklch(29% 0.007 286);
+    --color-zinc-300: oklch(36% 0.009 286);
+    --color-zinc-400: oklch(58% 0.014 286);
+    --color-zinc-500: oklch(68% 0.014 286);
+    --color-zinc-600: oklch(76% 0.012 286);
+    --color-zinc-700: oklch(82% 0.01 286);
+    --color-zinc-800: oklch(88% 0.007 286);
+    --color-zinc-900: oklch(93% 0.004 286);
+    --color-zinc-950: oklch(97% 0.002 286);
+    --color-brand-50: color-mix(in oklab, #2a1d41 60%, oklch(21% 0.006 286));
+    --color-brand-100: color-mix(in oklab, #382756 60%, oklch(21% 0.006 286));
+    --color-brand-200: color-mix(in oklab, #48326d 75%, oklch(21% 0.006 286));
+    --color-brand-300: #593f84;
+    --color-brand-400: #9478bb;
+    --color-brand-500: #8d72bf;
+    --color-brand-600: #b9a5d5;
+    --color-brand-700: #c9b8e3;
+    --color-brand-800: #d8cce8;
+    --color-brand-900: #ece6f4;
+    --color-brand-950: #f6f3fa;
+    --color-red-50: color-mix(in oklab, oklch(25.8% 0.092 26.042) 55%, oklch(21% 0.006 286));
+    --color-red-100: color-mix(in oklab, oklch(39.6% 0.141 25.723) 45%, oklch(21% 0.006 286));
+    --color-red-200: color-mix(in oklab, oklch(44.4% 0.177 26.899) 55%, oklch(21% 0.006 286));
+    --color-red-300: oklch(50.5% 0.213 27.518);
+    --color-red-400: oklch(63.7% 0.237 25.331);
+    --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-red-600: oklch(70.4% 0.191 22.216);
+    --color-red-700: oklch(80.8% 0.114 19.571);
+    --color-red-800: oklch(88.5% 0.062 18.334);
+    --color-red-900: oklch(93.6% 0.032 17.717);
+    --color-red-950: oklch(97.1% 0.013 17.38);
+    --color-amber-50: color-mix(in oklab, oklch(27.9% 0.077 45.635) 55%, oklch(21% 0.006 286));
+    --color-amber-100: color-mix(in oklab, oklch(41.4% 0.112 45.904) 45%, oklch(21% 0.006 286));
+    --color-amber-200: color-mix(in oklab, oklch(47.3% 0.137 46.201) 55%, oklch(21% 0.006 286));
+    --color-amber-300: oklch(55.5% 0.163 48.998);
+    --color-amber-400: oklch(76.9% 0.188 70.08);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-600: oklch(82.8% 0.189 84.429);
+    --color-amber-700: oklch(87.9% 0.169 91.605);
+    --color-amber-800: oklch(92.4% 0.12 95.746);
+    --color-amber-900: oklch(96.2% 0.059 95.617);
+    --color-amber-950: oklch(98.7% 0.022 95.277);
+    --color-emerald-50: color-mix(in oklab, oklch(26.2% 0.051 172.552) 55%, oklch(21% 0.006 286));
+    --color-emerald-100: color-mix(in oklab, oklch(37.8% 0.077 168.94) 45%, oklch(21% 0.006 286));
+    --color-emerald-200: color-mix(in oklab, oklch(43.2% 0.095 166.913) 55%, oklch(21% 0.006 286));
+    --color-emerald-300: oklch(50.8% 0.118 165.612);
+    --color-emerald-400: oklch(69.6% 0.17 162.48);
+    --color-emerald-500: oklch(69.6% 0.17 162.48);
+    --color-emerald-600: oklch(76.5% 0.177 163.223);
+    --color-emerald-700: oklch(84.5% 0.143 164.978);
+    --color-emerald-800: oklch(90.5% 0.093 164.15);
+    --color-emerald-900: oklch(95% 0.052 163.051);
+    --color-emerald-950: oklch(97.9% 0.021 166.113);
+    --color-sky-50: color-mix(in oklab, oklch(29.3% 0.066 243.157) 55%, oklch(21% 0.006 286));
+    --color-sky-100: color-mix(in oklab, oklch(39.1% 0.09 240.876) 45%, oklch(21% 0.006 286));
+    --color-sky-200: color-mix(in oklab, oklch(44.3% 0.11 240.79) 55%, oklch(21% 0.006 286));
+    --color-sky-300: oklch(50% 0.134 242.749);
+    --color-sky-400: oklch(68.5% 0.169 237.323);
+    --color-sky-500: oklch(68.5% 0.169 237.323);
+    --color-sky-600: oklch(74.6% 0.16 232.661);
+    --color-sky-700: oklch(82.8% 0.111 230.318);
+    --color-sky-800: oklch(90.1% 0.058 230.902);
+    --color-sky-900: oklch(95.1% 0.026 236.824);
+    --color-sky-950: oklch(97.7% 0.013 236.62);
+  }
+  :root[data-theme="dark"] dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+  /* Navigation chrome (sidebar, site header, sign-in panel) is already dark:
+   * it keeps its original colors in both modes. */
+  :root[data-theme="dark"] .theme-fixed {
     --color-zinc-50: oklch(98.5% 0 none);
     --color-zinc-100: oklch(96.7% 0.001 286.375);
     --color-zinc-200: oklch(92% 0.004 286.32);
@@ -366,8 +528,16 @@
 /* Chart colors: verified hours carry the emphasis, hours awaiting verification
  * recede. Both pairs pass the dataviz palette checks for their surface
  * (lightness band, chroma, color-blind separation). */
+/* Dark: when the device is dark and Light was not chosen (Display & accessibility). */
 @media screen and (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    --color-chart-verified: #9b80d8;
+    --color-chart-awaiting: #6a51ad;
+  }
+}
+/* Dark: when Dark was chosen, whatever the device says. */
+@media screen {
+  :root[data-theme="dark"] {
     --color-chart-verified: #9b80d8;
     --color-chart-awaiting: #6a51ad;
   }
@@ -409,8 +579,25 @@
   --autumn-wheat-stem: #c19c4e;
   --autumn-vein: rgba(0, 0, 0, 0.22);
 }
+/* Dark: when the device is dark and Light was not chosen (Display & accessibility). */
 @media screen and (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    --autumn-ember: #ea6a2a;
+    --autumn-amber: #f0a030;
+    --autumn-gold: #e2b235;
+    --autumn-cranberry: #d2335a;
+    --autumn-olive: #93a55c;
+    --autumn-bark: #a46e46;
+    --autumn-bark-leaf: #bd7d4e;
+    --autumn-acorn: #d29c4c;
+    --autumn-wheat: #dfbb64;
+    --autumn-wheat-stem: #c19c4e;
+    --autumn-vein: rgba(0, 0, 0, 0.22);
+  }
+}
+/* Dark: when Dark was chosen, whatever the device says. */
+@media screen {
+  :root[data-theme="dark"] {
     --autumn-ember: #ea6a2a;
     --autumn-amber: #f0a030;
     --autumn-gold: #e2b235;
@@ -457,8 +644,9 @@
   --winter-cone-light: #e0b48a;
   --winter-stem: #957a62;
 }
+/* Dark: when the device is dark and Light was not chosen (Display & accessibility). */
 @media screen and (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --winter-pine: #4f9a7a;
     --winter-pine-light: #79bb98;
     --winter-frost: #bcd8ee;
@@ -467,4 +655,114 @@
     --winter-cone-light: #e0b48a;
     --winter-stem: #957a62;
   }
+}
+/* Dark: when Dark was chosen, whatever the device says. */
+@media screen {
+  :root[data-theme="dark"] {
+    --winter-pine: #4f9a7a;
+    --winter-pine-light: #79bb98;
+    --winter-frost: #bcd8ee;
+    --winter-berry: #e0476a;
+    --winter-cone: #b7865e;
+    --winter-cone-light: #e0b48a;
+    --winter-stem: #957a62;
+  }
+}
+
+/* ---------------------------- Accessibility -----------------------------
+ * Choices from the Display & accessibility panel: data-* attributes on
+ * <html>, set on the server before the page draws (src/lib/preferences.ts).
+ * Screen only where it matters, so printouts stay exactly as the forms. */
+
+/* Text size: the whole page scales together, layout included. */
+@media screen {
+  :root[data-text="large"] {
+    zoom: 1.125;
+  }
+  :root[data-text="xlarge"] {
+    zoom: 1.25;
+  }
+}
+
+/* Easy-read font: Atkinson Hyperlegible Next, designed for low-vision readers. */
+:root[data-font="readable"] {
+  --font-plex-sans: var(--font-atkinson);
+}
+
+/* Wider letter, word, and line spacing (the WCAG text-spacing levels). */
+:root[data-spacing="wide"] body * {
+  letter-spacing: 0.035em !important;
+  word-spacing: 0.14em !important;
+}
+:root[data-spacing="wide"] :is(p, li, dd, dt, td, label, blockquote, textarea) {
+  line-height: 1.75 !important;
+}
+
+/* Reduce motion, whatever the device says. */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Bold focus outlines for keyboard users. */
+:root[data-focus="bold"] :focus-visible {
+  outline: 3px solid var(--color-brand-600) !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 7px color-mix(in oklab, var(--color-brand-500) 28%, transparent) !important;
+}
+
+/* Always underline text links. */
+:root[data-links="underline"] :is(p, li, dd, td) a,
+:root[data-links="underline"] a[class*="text-brand"] {
+  text-decoration: underline !important;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/* Seasonal decorations off. */
+:root[data-decor="off"] [data-season] {
+  display: none !important;
+}
+
+/* High contrast: secondary text and borders move toward the main text color. */
+:root[data-contrast="high"] {
+  --color-zinc-200: oklch(80% 0.006 286);
+  --color-zinc-300: oklch(68% 0.01 286);
+  --color-zinc-400: oklch(46% 0.016 286);
+  --color-zinc-500: oklch(38% 0.017 286);
+  --color-zinc-600: oklch(31% 0.015 286);
+  --color-zinc-700: oklch(25% 0.01 286);
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root[data-contrast="high"]:not([data-theme="light"]) {
+    --color-zinc-200: oklch(46% 0.008 286);
+    --color-zinc-300: oklch(56% 0.01 286);
+    --color-zinc-400: oklch(80% 0.012 286);
+    --color-zinc-500: oklch(87% 0.01 286);
+    --color-zinc-600: oklch(91% 0.008 286);
+    --color-zinc-700: oklch(94% 0.006 286);
+  }
+}
+@media screen {
+  :root[data-contrast="high"][data-theme="dark"] {
+    --color-zinc-200: oklch(46% 0.008 286);
+    --color-zinc-300: oklch(56% 0.01 286);
+    --color-zinc-400: oklch(80% 0.012 286);
+    --color-zinc-500: oklch(87% 0.01 286);
+    --color-zinc-600: oklch(91% 0.008 286);
+    --color-zinc-700: oklch(94% 0.006 286);
+  }
+}
+/* The always-dark navigation gets brighter muted text in high contrast. */
+:root[data-contrast="high"] .theme-fixed {
+  --color-zinc-300: oklch(93% 0.004 286);
+  --color-zinc-400: oklch(88% 0.006 286);
+  --color-zinc-500: oklch(80% 0.01 286);
+  --color-zinc-600: oklch(72% 0.012 286);
 }

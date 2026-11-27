@@ -22,6 +22,7 @@ export function SeasonalBanner({ season, message }: { season: Season; message: s
 
   return (
     <section
+      data-season=""
       aria-label={season.title}
       className={cn(
         "relative mb-6 overflow-hidden rounded-lg border bg-surface shadow-panel print:hidden",

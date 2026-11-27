@@ -27,6 +27,7 @@ import { CompactTitle, useScrolled } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { DepartmentOption, NotificationItem, OrgInfo, PositionOption } from "@/lib/types";
 import { AddMemberDialog } from "./member-dialogs";
+import { HeaderTools } from "@/components/preferences/header-tools";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
 
@@ -201,6 +202,7 @@ export function AdminShell({
           </CompactTitle>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LiveIndicator className="hidden xl:inline-flex" />
+            <HeaderTools tone="light" />
             <CommandPalette onAddMember={openAddMember} />
             <Button variant="primary" size="sm" onClick={openAddMember} aria-label="Add Member">
               <UserPlus />

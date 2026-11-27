@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand";
+import { HeaderTools } from "@/components/preferences/header-tools";
 import { SeasonGarland } from "@/components/season/season-garland";
 import { currentSeason } from "@/lib/season";
 import { cn } from "@/lib/cn";
@@ -53,14 +54,17 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
           </ol>
         </div>
         {season && (
-          <div className={cn("-mx-4", season.id === "winter" ? "winter-on-dark" : "autumn-on-dark")}>
+          <div data-season="" className={cn("-mx-4", season.id === "winter" ? "winter-on-dark" : "autumn-on-dark")}>
             <p className="mb-2 px-4 font-serif text-[17px] text-zinc-300">{season.title}</p>
             <SeasonGarland id={season.id} className="h-auto w-full max-w-[420px]" />
           </div>
         )}
         <p className="text-[12px] text-zinc-600">Restricted to authorized members of {org.organizationName}.</p>
       </aside>
-      <main className="flex flex-col bg-zinc-50">
+      <main className="relative flex flex-col bg-zinc-50">
+        <div className="absolute top-2.5 right-3 z-10">
+          <HeaderTools tone="light" />
+        </div>
         <div className="border-b border-zinc-200 bg-surface px-5 py-3 lg:hidden">
           <Wordmark organizationName={org.organizationName} subtitle={org.chapterName} />
         </div>

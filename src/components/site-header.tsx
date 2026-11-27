@@ -5,6 +5,7 @@ import { exitSiteAction } from "@/actions/auth";
 import { Wordmark } from "@/components/brand";
 import { LiveIndicator } from "@/components/realtime";
 import { buttonStyles } from "@/components/ui/button";
+import { HeaderTools } from "@/components/preferences/header-tools";
 import { CompactTitle } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { Viewer } from "@/lib/server/auth";
@@ -64,6 +65,7 @@ export function SiteHeader({
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
           {live && <LiveIndicator tone="dark" className="mr-1 hidden sm:inline-flex" />}
+          <HeaderTools tone="dark" />
           {viewer.admin ? (
             <Link href="/admin" className={buttonStyles({ variant: "dark", size: "sm" })}>
               <LayoutDashboard />

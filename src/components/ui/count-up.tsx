@@ -17,7 +17,9 @@ export function CountUp({ value, kind = "count" }: { value: number; kind?: "coun
     const start = from.current;
     from.current = value;
     if (start === value) return;
-    const duration = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 650;
+    const reduced =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.documentElement.dataset.motion === "reduce";
+    const duration = reduced ? 0 : 650;
     const began = performance.now();
     let frame = 0;
     const step = (now: number) => {
