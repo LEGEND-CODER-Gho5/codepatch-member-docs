@@ -167,6 +167,10 @@ let them override certificate verification (for example, `sslmode=require` would
 `npm run setup` generates `.env.local`; see [`.env.example`](.env.example). All `.env*` files except the example are git-ignored.
 Never commit connection strings or certificates.
 
+Keep the production `DATABASE_URL` out of `.env.local` and `.env.development.local`: `npm run dev` loads both, so local testing
+would read and write live data. Put it in a file Next.js does not load (such as `.env.supabase.local`) and pass that file to the
+database scripts with `--env-file`.
+
 ## Using Supabase
 
 A **dedicated, empty Supabase project** for this application is strongly recommended (separate credentials, backups, and
@@ -326,6 +330,11 @@ Then:
    (`@vercel/functions`), which releases idle connections before an instance suspends.
 3. Sign in as the administrator, confirm or change both passwords in Settings, and remove the `INITIAL_*` variables.
 
+**Automatic deploys from GitHub.** Once the Vercel project is connected to the GitHub repository (Project Settings → Git), every
+push to `main` deploys production, and every other branch gets a protected preview deployment (with no `DATABASE_URL`, so it
+shows an error page by design). If a change adds a migration, run `npm run db:migrate` against the production database before
+pushing it to `main`, as in step 1. Changes to environment variables take effect only after a redeploy.
+
 The live-update stream reconnects every four minutes to stay within function time limits. Without `DATABASE_URL`, a Vercel
 deployment fails fast with an explanatory error rather than starting against an empty temporary database.
 
@@ -394,9 +403,9 @@ with the same TLS verification as the app, and applies the same target-safety ch
 - One administrator account (the role described in the requirements); there are no separate admin user accounts.
 - Generated member passwords are shown to the administrator to deliver in person; email delivery is not built in.
 - "Supervisor Signature" is a typed signature, not a cryptographic e-signature. Printed copies leave blank lines for wet signatures.
-- The Supabase path has not yet been run against a live Supabase project: the schema, permissions, and TLS behaviour were verified locally (PostgreSQL 19 via PGlite with simulated Supabase roles, and a local TLS server). Supabase runs an older PostgreSQL major version; nothing in the schema needs a version newer than 13.
+- The schema, permissions, and TLS behaviour are covered by local tests (PostgreSQL 19 via PGlite with simulated Supabase roles, and a local TLS server), and the migrations are applied on a live Supabase project (PostgreSQL 17) that serves the deployed app. Nothing in the schema needs a version newer than 13.
 - The 5-second migration lock timeout is verified with a simulated lock wait and inside a real migration transaction, not with two
   competing PostgreSQL sessions (the embedded test database allows only one session).
-- The transaction pooler (port 6543) is expected to work for the deployed app (no session state, LISTEN/NOTIFY, named prepared statements, or temporary tables are used) but is not yet verified; migrations should run over the session pooler.
+- The deployed app uses Supabase's transaction pooler (port 6543). Parameterized queries, transactions, and concurrent queries were checked through it against a live project with full TLS verification; it works because the app uses no session state, LISTEN/NOTIFY, named prepared statements, or temporary tables. Migrations should still run over the session pooler (port 5432).
 - Anyone with the database owner's credentials or Supabase dashboard access can bypass application rules, including disabling the audit trigger. Protect those credentials and the service-role key.
 - Rate limiting relies on `X-Forwarded-For`; make sure your proxy or host sets it correctly.
