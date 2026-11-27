@@ -41,6 +41,7 @@ export const LATER_APP_TABLES = [
   "member_departments", // migration 4
   "meetings", // migration 6
   "meeting_attendance", // migration 6
+  "maintenance_status", // migration 8
 ] as const;
 
 /** Every table this application creates, across all migrations. */
@@ -535,6 +536,36 @@ ALTER TABLE meeting_attendance
   ADD COLUMN checked_in_at timestamptz,
   ADD COLUMN left_at timestamptz,
   ALTER COLUMN hours DROP NOT NULL;
+`,
+  },
+  {
+    version: 8,
+    name: "maintenance_status",
+    sql: /* sql */ `
+-- One row per background job (currently only the daily backup): when it last
+-- ran, when it last succeeded, and why it last failed. The daily backup writes
+-- here every night, which also counts as database activity.
+CREATE TABLE maintenance_status (
+  job text PRIMARY KEY CHECK (job IN ('daily_backup')),
+  last_run_at timestamptz NOT NULL DEFAULT now(),
+  last_success_at timestamptz,
+  last_error text,
+  last_backup_name text,
+  last_backup_bytes bigint
+);
+ALTER TABLE maintenance_status ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE
+  api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+      EXECUTE format('REVOKE ALL ON TABLE maintenance_status FROM %I', api_role);
+    END IF;
+  END LOOP;
+END;
+$$;
 `,
   },
 ];

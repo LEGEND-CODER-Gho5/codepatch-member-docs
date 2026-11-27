@@ -526,7 +526,7 @@ export async function queryAuditLogs(filters: AuditFilters) {
   } else if (filters.document === "member_account") {
     where.push(`entity_type = 'member'`);
   } else if (filters.document === "administration") {
-    where.push(`entity_type IN ('settings', 'department', 'position', 'security', 'attendance')`);
+    where.push(`entity_type IN ('settings', 'department', 'position', 'security', 'attendance', 'backup')`);
   }
   const from = filters.from ? startOfDayInAppTimeZone(filters.from) : null;
   if (from) add((p) => `last_occurred_at >= ${p}::timestamptz`, from.toISOString());

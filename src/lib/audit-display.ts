@@ -10,6 +10,8 @@ export const ACTION_LABELS: Record<string, string> = {
   restored: "Restored",
   initialized: "Initialized",
   locked_out: "Sign-in locked",
+  downloaded: "Downloaded",
+  failed: "Failed",
 };
 
 export const ACTION_FILTER_OPTIONS = [
@@ -40,6 +42,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   settings: "Settings",
   security: "Security",
   attendance: "Attendance",
+  backup: "Backup",
 };
 
 const DOCUMENT_LABELS: Record<DocumentType, string> = {

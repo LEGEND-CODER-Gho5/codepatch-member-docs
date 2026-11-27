@@ -1,4 +1,4 @@
-import { FileClock } from "lucide-react";
+import { CircleAlert, FileClock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActivityList } from "@/components/admin/activity-list";
@@ -8,18 +8,23 @@ import { PageHeader, Panel, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatCount, formatDateTime, formatHours } from "@/lib/format";
 import { requireAdminPage } from "@/lib/server/auth";
+import { backupStorageConfigured, getBackupStatus, isBackupStale } from "@/lib/server/backup-jobs";
 import { getOverviewStats, listDepartments, listNotifications, listRecentActivity } from "@/lib/server/queries";
 
 export const metadata: Metadata = { title: "Overview" };
 
 export default async function AdminOverviewPage() {
   await requireAdminPage();
-  const [stats, activity, notifications, departments] = await Promise.all([
+  const backupsConfigured = backupStorageConfigured();
+  const [stats, activity, notifications, departments, backupStatus] = await Promise.all([
     getOverviewStats(),
     listRecentActivity(10, { actorType: "member" }),
     listNotifications({ limit: 6 }),
     listDepartments(),
+    backupsConfigured ? getBackupStatus() : Promise.resolve(null),
   ]);
+  // Only once the first backup has run (or failed): a brand-new setup is not a problem yet.
+  const backupWarning = backupsConfigured && backupStatus !== null && isBackupStale(backupStatus);
 
   const largest = [...departments].sort((a, b) => b.activeMembers - a.activeMembers)[0];
   const tiles = [
@@ -66,7 +71,23 @@ export default async function AdminOverviewPage() {
         }
       />
 
-      <section aria-label="Statistics" className="grid overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-panel sm:grid-cols-2 xl:grid-cols-4">
+      {backupWarning && (
+        <Link
+          href="/admin/backups"
+          className="mb-6 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900 transition-colors hover:bg-amber-100"
+        >
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            <strong className="font-semibold">Backups need attention.</strong>{" "}
+            {backupStatus?.lastSuccessAt
+              ? `The last successful backup was ${formatDateTime(backupStatus.lastSuccessAt)}.`
+              : "No backup has succeeded yet."}{" "}
+            Open Backups to back up now.
+          </span>
+        </Link>
+      )}
+
+      <section aria-label="Statistics"className="grid overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-panel sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile, index) => (
           <Link
             key={tile.label}

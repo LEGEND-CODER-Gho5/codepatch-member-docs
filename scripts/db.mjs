@@ -36,7 +36,7 @@ import {
   readAppliedVersions,
   renderMigrationScript,
 } from "../src/lib/server/migrations.ts";
-import { TargetSafetyError, UsageError, checkTargetConfirmation, loadEnvironment, parseArguments } from "./lib/cli.mjs";
+import { TargetSafetyError, UsageError, checkTargetConfirmation, loadEnvironment, openCliDatabase, parseArguments } from "./lib/cli.mjs";
 
 const USAGE = `Usage:
   npm run db:print-sql [-- --out <file>]
@@ -45,54 +45,6 @@ const USAGE = `Usage:
 
 db:migrate needs --confirm-target for any database that is not on this machine: the
 Supabase project ref (or the host name for other PostgreSQL servers) shown on the Target line.`;
-
-async function openCliDatabase(config) {
-  if (config.kind === "pglite") {
-    const { PGlite } = await import("@electric-sql/pglite");
-    fs.mkdirSync(config.dataDir, { recursive: true });
-    const client = await PGlite.create(config.dataDir);
-    const wrap = (target) => ({
-      query: async (text, params = []) => (await target.query(text, params)).rows,
-      exec: async (text) => {
-        await target.exec(text);
-      },
-    });
-    return { ...wrap(client), transaction: (fn) => client.transaction((tx) => fn(wrap(tx))), close: () => client.close() };
-  }
-
-  const pg = (await import("pg")).default;
-  const client = new pg.Client({
-    connectionString: config.connectionString,
-    ssl: config.ssl,
-    connectionTimeoutMillis: config.connectionTimeoutMillis,
-  });
-  try {
-    await client.connect();
-  } catch (error) {
-    throw explainDatabaseError(error, config);
-  }
-  const queryable = {
-    query: async (text, params = []) => (await client.query(text, params)).rows,
-    exec: async (text) => {
-      await client.query(text);
-    },
-  };
-  return {
-    ...queryable,
-    async transaction(fn) {
-      await client.query("BEGIN");
-      try {
-        const result = await fn(queryable);
-        await client.query("COMMIT");
-        return result;
-      } catch (error) {
-        await client.query("ROLLBACK").catch(() => undefined);
-        throw error;
-      }
-    },
-    close: () => client.end(),
-  };
-}
 
 async function printStatus(db) {
   const applied = await readAppliedVersions(db);

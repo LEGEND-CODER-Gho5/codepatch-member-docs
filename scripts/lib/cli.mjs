@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
-import { isLocalHost } from "../../src/lib/server/db-config.ts";
+import { explainDatabaseError, isLocalHost } from "../../src/lib/server/db-config.ts";
 
 export class UsageError extends Error {
   constructor(message) {
@@ -166,4 +166,57 @@ export function checkTargetConfirmation(config, confirmation, { required, comman
     throw new TargetSafetyError(`The --confirm-target value does not match this database's ${label} (${expected}). ${stopped}`);
   }
   return { confirmed: true, label, name: expected };
+}
+
+/**
+ * Opens the configured database for a command-line script: one PostgreSQL
+ * connection (same TLS verification as the application) or the embedded
+ * database. Returns query/exec/transaction/close.
+ */
+export async function openCliDatabase(config) {
+  if (config.kind === "pglite") {
+    const { PGlite } = await import("@electric-sql/pglite");
+    fs.mkdirSync(config.dataDir, { recursive: true });
+    const client = await PGlite.create(config.dataDir);
+    const wrap = (target) => ({
+      query: async (text, params = []) => (await target.query(text, params)).rows,
+      exec: async (text) => {
+        await target.exec(text);
+      },
+    });
+    return { ...wrap(client), transaction: (fn) => client.transaction((tx) => fn(wrap(tx))), close: () => client.close() };
+  }
+
+  const pg = (await import("pg")).default;
+  const client = new pg.Client({
+    connectionString: config.connectionString,
+    ssl: config.ssl,
+    connectionTimeoutMillis: config.connectionTimeoutMillis,
+  });
+  try {
+    await client.connect();
+  } catch (error) {
+    throw explainDatabaseError(error, config);
+  }
+  const queryable = {
+    query: async (text, params = []) => (await client.query(text, params)).rows,
+    exec: async (text) => {
+      await client.query(text);
+    },
+  };
+  return {
+    ...queryable,
+    async transaction(fn) {
+      await client.query("BEGIN");
+      try {
+        const result = await fn(queryable);
+        await client.query("COMMIT");
+        return result;
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => undefined);
+        throw error;
+      }
+    },
+    close: () => client.end(),
+  };
 }

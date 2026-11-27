@@ -14,8 +14,11 @@
     "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs migrate",
     "db:status": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs status",
     "db:print-sql": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs print-sql",
+    "db:backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/backup.mjs create",
+    "db:restore": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/backup.mjs restore",
     "test:security": "node scripts/security-check.mjs",
     "test:audit": "node --no-warnings scripts/test-audit-immutability.mjs",
+    "test:backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-backup.mjs",
     "test:db-config": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-database-config.mjs",
     "test:migrations": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-migrations.mjs",
     "test:target-safety": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-target-safety.mjs"
@@ -23,7 +26,9 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.6.0",
     "@pdf-lib/fontkit": "^1.1.1",
+    "@vercel/blob": "2.9.0",
     "@vercel/functions": "^3.11.3",
+    "@vercel/schedules": "0.0.3",
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
     "lucide-react": "^1.79.0",

@@ -53,6 +53,7 @@ All three are verified on the server, stored only as scrypt hashes, and versione
 - **Administrator dashboard** — Overview (live statistics, recent member activity, notifications, department totals), Member Management (search; department, position, and status filters; add, edit, deactivate/reactivate, delete, reset password), Documentation Management (per-member view and an all-entries feed with filters; open and edit any record without a member password; version history and restore), Edit History, Notifications, Department Management, and Settings.
 - **Add Member** — validates input, creates the member with a unique ID (`CPS-1001`, …), generates a ~70-bit random password (shown once with a copy button; the dialog cannot be dismissed until the password is acknowledged), hashes it, issues both documents, and updates the directory, counts, and statistics immediately.
 - **Edit History (audit log)** — every documentation, hours, account, password, department, position, and settings change, with actor, actor type, member, department, action, document, server timestamp (shown in America/New_York), and previous/new versions with a word-level diff. Filters: member search, department, action, document type, date range, actor type, sort order. Consecutive saves by the same person on the same record are grouped into one editing session so the log stays readable: a save joins the session while it comes within 10 minutes of the previous save and within 30 minutes of the session's first save; otherwise it starts a new entry.
+- **Backups** — Admin → Backups: download a **spreadsheet** (.xlsx: members, records, volunteer hours, contributions, meetings, attendance, departments; no passwords) or a **full backup** (.json: everything needed to rebuild the site). On the live site a full backup is also saved every night at about 3 AM (and on **Back up now**) to a private Vercel Blob store, separate from the database; the last 30 days are kept plus the first backup of each month for 12 months. The nightly run also keeps a free Supabase project from pausing. See [Backups and restore](#backups-and-restore).
 - **Notifications** — generated in the same database transaction as member changes and account/security events (including sign-in lockouts), delivered in real time with an unread counter, dropdown, toast, full page, and mark read/unread/all.
 
 ## Architecture
@@ -89,6 +90,7 @@ Defined in [`src/lib/server/migrations.ts`](src/lib/server/migrations.ts) (`npm 
 | `notifications` | Admin notifications linked to audit records |
 | `sessions`, `login_attempts` | Session store and rate-limiting ledger |
 | `realtime_events` | Change feed for the event stream (pruned after a day) |
+| `maintenance_status` | When the nightly backup last ran and succeeded, and why it last failed |
 | `schema_migrations` | Applied migration versions |
 
 Row Level Security is enabled on every table with no policies (deny by default). On Supabase, migrations 1 and 2 also revoke every
@@ -171,6 +173,7 @@ let them override certificate verification (for example, `sslmode=require` would
 | `DATABASE_CONNECT_TIMEOUT_MS` | No | Time limit for opening a database connection (default 10000). |
 | `PGLITE_DATA_DIR` | No | Embedded database location (default `./.data/pglite`). |
 | `COOKIE_SECURE` | No | Set to `false` only when serving production over plain HTTP on a private network. |
+| `BLOB_READ_WRITE_TOKEN` or `BLOB_STORE_ID` | For saved backups | Set by Vercel when a private Blob store is connected to the project. Without it, saved backups are off and Admin → Backups offers downloads only. |
 
 `npm run setup` generates `.env.local`; see [`.env.example`](.env.example). All `.env*` files except the example are git-ignored.
 Never commit connection strings or certificates.
@@ -206,7 +209,7 @@ with app_names(name) as (
     ('application_settings'), ('departments'), ('positions'), ('members'), ('member_credentials'),
     ('member_documentation'), ('contribution_entries'), ('volunteer_hours'), ('audit_logs'),
     ('notifications'), ('sessions'), ('login_attempts'), ('realtime_events'), ('schema_migrations'),
-    ('member_departments'), ('meetings'), ('meeting_attendance'),
+    ('member_departments'), ('meetings'), ('meeting_attendance'), ('maintenance_status'),
     ('member_number_seq'), ('audit_logs_id_seq'), ('notifications_id_seq'), ('login_attempts_id_seq'),
     ('realtime_events_id_seq'),
     ('departments_name_unique'), ('positions_name_unique'), ('members_department_idx'), ('members_status_idx'),
@@ -221,7 +224,8 @@ with app_names(name) as (
     ('members_member_number_key'), ('member_credentials_pkey'), ('member_documentation_pkey'),
     ('contribution_entries_pkey'), ('volunteer_hours_pkey'), ('audit_logs_pkey'), ('notifications_pkey'),
     ('sessions_pkey'), ('sessions_token_hash_key'), ('login_attempts_pkey'), ('realtime_events_pkey'),
-    ('schema_migrations_pkey'), ('member_departments_pkey'), ('meetings_pkey'), ('meeting_attendance_pkey')
+    ('schema_migrations_pkey'), ('member_departments_pkey'), ('meetings_pkey'), ('meeting_attendance_pkey'),
+    ('maintenance_status_pkey')
 ),
 taken as (
   select c.relname::text as name,
@@ -259,7 +263,7 @@ union all
 select 6, 'Name already used in schema public: ' || name, kind, 'STOP'
 from taken
 union all
-select 6, 'Names for 17 tables, 5 sequences, 45 indexes', 'all free', 'OK'
+select 6, 'Names for 18 tables, 5 sequences, 46 indexes', 'all free', 'OK'
 where not exists (select 1 from taken)
 union all
 select 7, 'Type name already used in schema public: ' || t.typname, 'type', 'STOP'
@@ -283,14 +287,14 @@ select 10, 'Tables already in schema public (left untouched)',
 order by step, item;
 ```
 
-Step 6 covers all 67 names the migrations create in `public`: 17 tables, 5 sequences, and 45 indexes, including the implicit
+Step 6 covers all 69 names the migrations create in `public`: 18 tables, 5 sequences, and 46 indexes, including the implicit
 primary-key and unique-constraint indexes. Most clashes would only make the migration fail and roll back, but PostgreSQL silently
 renames an automatically created sequence or index whose name is taken, and `CREATE TABLE IF NOT EXISTS` would silently reuse an
 existing `schema_migrations` table, so every clash is a STOP. Step 7 catches a standalone type (such as an enum) with one of those
 names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names; migration 4 adds the
 `member_departments` table and its two indexes, migration 5 only adds columns, and migration 6 adds the `meetings` and
-`meeting_attendance` tables and their indexes, and migration 7 adds columns and the `meetings_one_live_idx` index (all included
-above).
+`meeting_attendance` tables and their indexes, migration 7 adds columns and the `meetings_one_live_idx` index, and migration 8 adds the `maintenance_status` table (all
+included above).
 
 1. **Connection strings.** In the Supabase dashboard, open **Connect** and copy two Supavisor pooler URIs: the **session pooler**
    (port `5432`, for running migrations) and the **transaction pooler** (port `6543`, for the deployed app). The user name has the
@@ -316,7 +320,7 @@ above).
    `db:status` prints the Target line (host, port, database, Supabase project ref, TLS mode) and `DATABASE_URL from:` (it must
    name your env file). Check both before migrating; `db:migrate` runs only when `--confirm-target` matches that project ref.
 
-5. In **Table Editor**, confirm the 17 tables exist and are empty (`schema_migrations` has one row per migration). The first app
+5. In **Table Editor**, confirm the 18 tables exist and are empty (`schema_migrations` has one row per migration). The first app
    start then creates the settings row from `INITIAL_*` and seeds departments and positions. No members are ever seeded.
 
 If verification fails, the error explains the cause (missing CA certificate, host-name mismatch, IPv6-only host, wrong password,
@@ -348,6 +352,12 @@ push to `main` deploys production, and every other branch gets a protected previ
 shows an error page by design). If a change adds a migration, run `npm run db:migrate` against the production database before
 pushing it to `main`, as in step 1. Changes to environment variables take effect only after a redeploy.
 
+**Saved backups and the nightly schedule.** Connect a private Blob store to **Production** only
+(`vercel blob create-store <name> --access private --yes --environment production`); it adds the store's credentials as an
+environment variable. The `daily-backup` schedule in [`vercel.json`](vercel.json) is registered when a production deployment
+becomes current; check it with `vercel schedules list` and run it once with `vercel schedules invoke daily-backup`. Previews get
+neither (their schedules start inactive, and they have no database). See [Backups and restore](#backups-and-restore).
+
 The live-update stream reconnects every four minutes to stay within function time limits. Without `DATABASE_URL`, a Vercel
 deployment fails fast with an explanatory error rather than starting against an empty temporary database.
 
@@ -375,6 +385,7 @@ upgrades). Put it behind HTTPS.
 npm run typecheck        # TypeScript
 npm run lint             # ESLint (Next.js + React rules)
 npm run build            # production build
+npm run test:backup         # full backup → restore round trip, refusals, retention rule, and the .xlsx file format (in-memory PostgreSQL)
 npm run test:audit          # audit-log immutability and the 30-minute merge cap: the trigger and the app's merge logic (in-memory PostgreSQL)
 npm run test:migrations     # migration runner, upgrades, lock timeout, rollback on failure, Supabase API-role permissions (simulated roles)
 npm run test:db-config      # production guard, TLS settings, certificates, project refs, secret-free errors, attachDatabasePool
@@ -411,6 +422,44 @@ npm run credentials:reset -- admin --env-file .env.supabase.local --confirm-targ
 This prints a new random password, stores only its hash, signs out sessions of that kind, and writes an audit record. It connects
 with the same TLS verification as the app, and applies the same target-safety checks as `db:migrate` before connecting.
 
+## Backups and restore
+
+**What is saved.** A full backup is one JSON file with every row of every table that holds chapter data: settings, departments,
+positions, members, their departments, password hashes (never readable passwords), both documents, contribution and hours entries,
+meetings, attendance, Edit History, and notifications, plus the ID counters (so CPS-#### numbers are never reused). Sign-in sessions,
+the sign-in rate-limit ledger, the live-update feed, and job status are left out; after a restore everyone signs in again with the
+same passwords. Keep backup files private.
+
+**Where backups come from.**
+
+| How | What you get |
+| --- | --- |
+| Admin → Backups → **Download full backup** / **Download spreadsheet** | A fresh file made from the live data (recorded in Edit History) |
+| Every night at about 3 AM New York time (Vercel schedule `daily-backup` in [`vercel.json`](vercel.json)), or **Back up now** | Saved in the private Blob store `codepatch-backups`; listed and downloadable on Admin → Backups |
+| `npm run db:backup -- --env-file .env.supabase.local` | A file in `./backups/` (git-ignored, never uploaded). Run this before risky changes such as a migration. |
+
+The schedule targets a private function (`src/app/api/scheduled-backup/route.ts`, trigger `schedule/v1beta`): only Vercel's
+scheduler can call it. A repeated delivery within 20 hours of a successful backup only records that it ran. Each run writes to
+`maintenance_status`; if one fails, the administrator gets a notification, and Overview and Backups show a warning once no backup
+has succeeded for 48 hours. Saved copies are kept for 30 days, plus the first backup of each month for 12 months.
+
+**Keeping a free Supabase project awake.** Supabase pauses free projects after a week of low database activity. The nightly backup
+reads every table and writes `maintenance_status` every day, so the database is never idle for a week, even over school breaks.
+
+**Restoring.** A restore only goes into a database that has none of this application's tables (a new Supabase project, or the
+local embedded database); it never overwrites or merges with existing data. It recreates the schema the backup was made with, loads
+every row, restores the ID counters, and then applies any newer migrations, all in one transaction.
+
+```bash
+npm run db:restore -- --file backup.json --check                                    # read the file only: is it complete?
+npm run db:restore -- --file backup.json --env-file .env.new.local --confirm-target <new-project-ref>
+```
+
+To rebuild the live site after losing its database: create a new Supabase project, put its session-pooler URL and CA certificate in
+`.env.new.local`, run the restore above, then point the Vercel `DATABASE_URL` (transaction pooler) and `DATABASE_CA_CERT` at the
+new project and redeploy. To look at a backup locally instead, restore it into a separate embedded database
+(`PGLITE_DATA_DIR=.data/restored` with `--embedded`) and start `npm run dev` with the same `PGLITE_DATA_DIR`.
+
 ## Known limitations
 
 - One administrator account (the role described in the requirements); there are no separate admin user accounts.
@@ -422,3 +471,4 @@ with the same TLS verification as the app, and applies the same target-safety ch
 - The deployed app uses Supabase's transaction pooler (port 6543). Parameterized queries, transactions, and concurrent queries were checked through it against a live project with full TLS verification; it works because the app uses no session state, LISTEN/NOTIFY, named prepared statements, or temporary tables. Migrations should still run over the session pooler (port 5432).
 - Anyone with the database owner's credentials or Supabase dashboard access can bypass application rules, including disabling the audit trigger. Protect those credentials and the service-role key.
 - Rate limiting relies on `X-Forwarded-For`; make sure your proxy or host sets it correctly.
+- Saved backups live in the same Vercel account as the site. For a copy outside Vercel too, download a full backup now and then and keep it somewhere private.

@@ -19,6 +19,10 @@ const checks = [
   ["/admin/notifications", "/login"],
   ["/admin/departments", "/login"],
   ["/admin/settings", "/login"],
+  ["/admin/backups", "/login"],
+  ["/admin/backups/spreadsheet", "/login"],
+  ["/admin/backups/full", "/login"],
+  ["/admin/backups/saved?name=backups/20260101T000000Z-scheduled.json", "/login"],
   ["/admin/login", "/login"],
 ];
 
@@ -41,6 +45,23 @@ for (const cookie of ["cps_admin=forged-token", "cps_site=forged; cps_member=for
   console.log(`${ok ? "pass" : "FAIL"}  forged cookies (${cookie.split(";").length}) on /admin/history -> ${status} ${target}`);
   if (!ok) failures++;
 }
+
+for (const cookie of ["cps_admin=forged-token", "cps_site=forged; cps_member=forged; cps_admin=forged"]) {
+  const { status, location: target } = await location("/admin/backups/full", { cookie });
+  const ok = status >= 300 && status < 400 && new URL(target, base).pathname === "/login";
+  console.log(`${ok ? "pass" : "FAIL"}  forged cookies (${cookie.split(";").length}) on /admin/backups/full -> ${status} ${target}`);
+  if (!ok) failures++;
+}
+
+const crossSite = await fetch(`${base}/admin/backups/full`, { redirect: "manual", headers: { "sec-fetch-site": "cross-site" } });
+console.log(`${crossSite.status === 403 ? "pass" : "FAIL"}  /admin/backups/full started by another website -> ${crossSite.status}`);
+if (crossSite.status !== 403) failures++;
+
+// The nightly backup function answers only Vercel's scheduler: a plain request
+// must never run it (400 = not a schedule dispatch; 404 = not publicly routed).
+const scheduled = await fetch(`${base}/api/scheduled-backup`, { method: "POST", redirect: "manual" });
+console.log(`${[400, 404, 405].includes(scheduled.status) ? "pass" : "FAIL"}  POST /api/scheduled-backup without a schedule dispatch -> ${scheduled.status}`);
+if (![400, 404, 405].includes(scheduled.status)) failures++;
 
 const stream = await fetch(`${base}/api/stream`);
 console.log(`${stream.status === 401 ? "pass" : "FAIL"}  /api/stream without a session -> ${stream.status}`);

@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Claude Code per-user settings (can record approved commands word for word)
 .claude/settings.local.json
+
+# backup files made by `npm run db:backup` (they contain password hashes)
+/backups/

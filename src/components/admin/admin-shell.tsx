@@ -4,6 +4,7 @@ import {
   Bell,
   Building,
   ClipboardCheck,
+  DatabaseBackup,
   ExternalLink,
   FileClock,
   FileText,
@@ -44,6 +45,7 @@ const NAV = [
   { href: "/admin/history", label: "Edit History", icon: FileClock },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/departments", label: "Departments", icon: Building },
+  { href: "/admin/backups", label: "Backups", icon: DatabaseBackup },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

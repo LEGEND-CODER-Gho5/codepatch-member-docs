@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/scheduled-backup/route.ts": {
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
+    }
+  },
+  "schedules": {
+    "daily-backup": {
+      "schedule": "0 3 * * *",
+      "timezone": "America/New_York",
+      "function": "api/scheduled-backup"
+    }
+  }
+}
