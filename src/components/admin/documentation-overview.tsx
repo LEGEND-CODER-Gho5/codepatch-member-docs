@@ -16,6 +16,7 @@ export type DocumentationRow = {
   status: MemberStatus;
   departmentId: string;
   departmentName: string;
+  otherDepartments: { id: string; name: string }[];
   positionName: string;
   documentationRecords: number;
   hoursRecords: number;
@@ -37,7 +38,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
     return rows.filter(
       (row) =>
         (!needle || row.fullName.toLowerCase().includes(needle) || row.memberCode.toLowerCase().includes(needle)) &&
-        (!department || row.departmentId === department) &&
+        (!department || row.departmentId === department || row.otherDepartments.some((other) => other.id === department)) &&
         (!status || row.status === status),
     );
   }, [rows, query, department, status]);
@@ -105,7 +106,12 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
                       {row.positionName} · <span className="font-mono">{row.memberCode}</span>
                     </p>
                   </td>
-                  <td className={cn(tableStyles.td, "whitespace-nowrap")}>{row.departmentName}</td>
+                  <td className={cn(tableStyles.td, "whitespace-nowrap")}>
+                    {row.departmentName}
+                    {row.otherDepartments.length > 0 && (
+                      <span className="block text-[12px] text-zinc-500">also {row.otherDepartments.map((other) => other.name).join(", ")}</span>
+                    )}
+                  </td>
                   {showDocs && (
                     <td className={tableStyles.td}>
                       <DocCell

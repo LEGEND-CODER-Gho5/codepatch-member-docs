@@ -25,6 +25,32 @@ function isoOrNull(value: unknown): string | null {
   return value ? iso(value) : null;
 }
 
+/* ----------------------------- Other departments ---------------------------- */
+
+export type DepartmentRef = { id: string; name: string };
+
+/**
+ * Each member's departments besides the main one (member_departments), in
+ * department display order, keyed by member id. Pass a member id to load one.
+ */
+async function loadOtherDepartments(memberId?: string): Promise<Map<string, DepartmentRef[]>> {
+  const rows = await sql<{ member_id: string; department_id: string; name: string }>(
+    `SELECT md.member_id, d.id AS department_id, d.name
+       FROM member_departments md
+       JOIN departments d ON d.id = md.department_id
+      ${memberId ? "WHERE md.member_id = $1" : ""}
+      ORDER BY d.sort_order, lower(d.name)`,
+    memberId ? [memberId] : [],
+  );
+  const byMember = new Map<string, DepartmentRef[]>();
+  for (const row of rows) {
+    const list = byMember.get(row.member_id) ?? [];
+    list.push({ id: row.department_id, name: row.name });
+    byMember.set(row.member_id, list);
+  }
+  return byMember;
+}
+
 /* -------------------------------- Directory ------------------------------- */
 
 export type DirectoryMember = { id: string; fullName: string; positionName: string; memberCode: string };
@@ -40,14 +66,21 @@ export async function getDirectory(): Promise<{ departments: DirectoryDepartment
       WHERE m.status = 'active'
       ORDER BY p.sort_order, lower(m.full_name)`,
   );
+  const others = await loadOtherDepartments();
   const byId = new Map<string, DirectoryDepartment>(departments.map((d) => [d.id, { ...d, members: [] }]));
+  // Members are already sorted, so appending in this order keeps every column sorted,
+  // including the columns of a member's other departments.
   for (const member of members) {
-    byId.get(member.department_id)?.members.push({
+    const entry: DirectoryMember = {
       id: member.id,
       fullName: member.full_name,
       positionName: member.position_name,
       memberCode: memberCode(member.member_number),
-    });
+    };
+    byId.get(member.department_id)?.members.push(entry);
+    for (const other of others.get(member.id) ?? []) {
+      if (other.id !== member.department_id) byId.get(other.id)?.members.push(entry);
+    }
   }
   return { departments: [...byId.values()], totalActive: members.length };
 }
@@ -67,6 +100,7 @@ export type MemberRow = {
   deactivatedAt: string | null;
   departmentId: string;
   departmentName: string;
+  otherDepartments: DepartmentRef[];
   positionId: string;
   positionName: string;
   lastLoginAt: string | null;
@@ -112,7 +146,7 @@ type MemberDbRow = {
   last_activity_at: Date | null;
 };
 
-function mapMember(row: MemberDbRow): MemberRow {
+function mapMember(row: MemberDbRow, others: Map<string, DepartmentRef[]>): MemberRow {
   return {
     id: row.id,
     memberNumber: row.member_number,
@@ -126,6 +160,7 @@ function mapMember(row: MemberDbRow): MemberRow {
     deactivatedAt: isoOrNull(row.deactivated_at),
     departmentId: row.department_id,
     departmentName: row.department_name,
+    otherDepartments: others.get(row.id) ?? [],
     positionId: row.position_id,
     positionName: row.position_name,
     lastLoginAt: isoOrNull(row.last_login_at),
@@ -138,14 +173,14 @@ function mapMember(row: MemberDbRow): MemberRow {
 }
 
 export async function listMembers(): Promise<MemberRow[]> {
-  const rows = await sql<MemberDbRow>(`${MEMBER_SELECT} ORDER BY lower(m.full_name)`);
-  return rows.map(mapMember);
+  const [rows, others] = await Promise.all([sql<MemberDbRow>(`${MEMBER_SELECT} ORDER BY lower(m.full_name)`), loadOtherDepartments()]);
+  return rows.map((row) => mapMember(row, others));
 }
 
 export async function getMember(id: string): Promise<MemberRow | null> {
   if (!isUuid(id)) return null;
-  const row = await sqlOne<MemberDbRow>(`${MEMBER_SELECT} WHERE m.id = $1`, [id]);
-  return row ? mapMember(row) : null;
+  const [row, others] = await Promise.all([sqlOne<MemberDbRow>(`${MEMBER_SELECT} WHERE m.id = $1`, [id]), loadOtherDepartments(id)]);
+  return row ? mapMember(row, others) : null;
 }
 
 export async function getWorkspaceMember(id: string): Promise<WorkspaceMember | null> {
@@ -159,12 +194,14 @@ export async function getWorkspaceMember(id: string): Promise<WorkspaceMember | 
     [id],
   );
   if (!row) return null;
+  const others = await loadOtherDepartments(id);
   return {
     id: row.id,
     fullName: row.full_name,
     memberCode: memberCode(row.member_number),
     positionName: row.position_name,
     departmentName: row.department_name,
+    otherDepartmentNames: (others.get(id) ?? []).map((department) => department.name),
     status: row.status,
   };
 }
@@ -303,13 +340,17 @@ export async function listDepartments(): Promise<DepartmentRow[]> {
     hours_total: number;
     created_at: Date;
   }>(
+    // Member counts include members for whom this is one of their other departments.
+    // Volunteer hours count each member's main department only, so no hour is counted twice.
     `SELECT d.id, d.name, d.description, d.sort_order, d.created_at,
             count(m.id) FILTER (WHERE m.status = 'active') AS active_members,
             count(m.id) AS total_members,
             (SELECT coalesce(sum(h.hours), 0) FROM volunteer_hours h JOIN members hm ON hm.id = h.member_id
               WHERE hm.department_id = d.id) AS hours_total
        FROM departments d
-       LEFT JOIN members m ON m.department_id = d.id
+       LEFT JOIN members m
+         ON m.department_id = d.id
+         OR EXISTS (SELECT 1 FROM member_departments md WHERE md.member_id = m.id AND md.department_id = d.id)
       GROUP BY d.id
       ORDER BY d.sort_order, lower(d.name)`,
   );
@@ -584,6 +625,7 @@ export type DocumentationOverviewRow = {
   status: MemberStatus;
   departmentId: string;
   departmentName: string;
+  otherDepartments: DepartmentRef[];
   positionName: string;
   documentationRecords: number;
   hoursRecords: number;
@@ -595,6 +637,7 @@ export type DocumentationOverviewRow = {
 };
 
 export async function getDocumentationOverview(): Promise<DocumentationOverviewRow[]> {
+  const others = await loadOtherDepartments();
   const rows = await sql<{
     id: string;
     member_number: number;
@@ -633,6 +676,7 @@ export async function getDocumentationOverview(): Promise<DocumentationOverviewR
     status: row.status,
     departmentId: row.department_id,
     departmentName: row.department_name,
+    otherDepartments: others.get(row.id) ?? [],
     positionName: row.position_name,
     documentationRecords: Number(row.md_records),
     hoursRecords: Number(row.vh_records),
@@ -672,7 +716,11 @@ export async function listAllEntries(filters: { kind?: string; member?: string; 
   }
   if (filters.department && isUuid(filters.department)) {
     params.push(filters.department);
-    where.push(`department_id = $${params.length}::uuid`);
+    const p = `$${params.length}::uuid`;
+    // A member's main department or any of their other departments.
+    where.push(
+      `(department_id = ${p} OR EXISTS (SELECT 1 FROM member_departments md WHERE md.member_id = entries.member_id AND md.department_id = ${p}))`,
+    );
   }
   const q = filters.q?.trim().slice(0, 100);
   if (q) {

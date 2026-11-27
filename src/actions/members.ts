@@ -7,18 +7,24 @@ import { getSettings } from "@/lib/server/settings";
 import { generatePassword, hashPassword } from "@/lib/server/security";
 import { cleanDate, cleanEmail, cleanLine, isUuid, LIMITS } from "@/lib/validation";
 import { DOCUMENT_TYPE_LABEL } from "@/lib/document-text";
-import { memberCode } from "@/lib/format";
+import { formatDepartments, memberCode } from "@/lib/format";
 import type { ActionResult, DocumentType, MemberStatus } from "@/lib/types";
 import { ActionError, fail, handleActionError, UNAUTHORIZED } from "./shared";
 
 export type MemberFormInput = {
   fullName: string;
+  /** Main department: used for volunteer-hour totals, Edit History, and notifications. */
   departmentId: string;
+  /** Other departments the member also belongs to. */
+  otherDepartmentIds: string[];
   positionId: string;
   status: string;
   email: string;
   startDate: string;
 };
+
+/** More than any chapter needs; keeps a forged request from inserting thousands of rows. */
+const MAX_OTHER_DEPARTMENTS = 50;
 
 export type IssuedCredential = {
   id: string;
@@ -33,6 +39,8 @@ export type IssuedCredential = {
 type CleanMember = {
   fullName: string;
   departmentId: string;
+  /** Never contains the main department. Null means "leave unchanged" (a request without the field). */
+  otherDepartmentIds: string[] | null;
   positionId: string;
   status: MemberStatus;
   email: string | null;
@@ -44,6 +52,14 @@ function validateMember(input: MemberFormInput): { ok: true; value: CleanMember 
   const fullName = cleanLine(input.fullName, LIMITS.fullName, "Full name", true);
   if (!fullName.ok) return fullName;
   if (!isUuid(input.departmentId)) return { ok: false, error: "Select a department." };
+  let otherDepartmentIds: string[] | null = null;
+  if (input.otherDepartmentIds !== undefined && input.otherDepartmentIds !== null) {
+    const raw: unknown = input.otherDepartmentIds;
+    if (!Array.isArray(raw) || raw.length > MAX_OTHER_DEPARTMENTS || !raw.every((id) => isUuid(id))) {
+      return { ok: false, error: "Select valid other departments." };
+    }
+    otherDepartmentIds = [...new Set(raw as string[])].filter((id) => id !== input.departmentId);
+  }
   if (!isUuid(input.positionId)) return { ok: false, error: "Select a position/role." };
   if (input.status !== "active" && input.status !== "inactive") return { ok: false, error: "Select a member status." };
   const email = cleanEmail(input.email);
@@ -55,6 +71,7 @@ function validateMember(input: MemberFormInput): { ok: true; value: CleanMember 
     value: {
       fullName: fullName.value,
       departmentId: input.departmentId,
+      otherDepartmentIds,
       positionId: input.positionId,
       status: input.status,
       email: email.value,
@@ -73,10 +90,12 @@ type MemberSnapshotRow = {
   department_id: string;
   department_name: string;
   position_name: string;
+  /** Other departments, in display order. */
+  other_department_names: string[];
 };
 
 async function loadMemberForUpdate(tx: Queryable, memberId: string): Promise<MemberSnapshotRow> {
-  const [row] = await tx.query<MemberSnapshotRow>(
+  const [row] = await tx.query<Omit<MemberSnapshotRow, "other_department_names">>(
     `SELECT m.id, m.member_number, m.full_name, m.email, m.status, m.start_date, m.department_id,
             d.name AS department_name, p.name AS position_name
        FROM members m
@@ -87,14 +106,26 @@ async function loadMemberForUpdate(tx: Queryable, memberId: string): Promise<Mem
     [memberId],
   );
   if (!row) throw new ActionError("This member no longer exists.", "not_found");
-  return row;
+  const others = await tx.query<{ name: string }>(
+    `SELECT d.name FROM member_departments md JOIN departments d ON d.id = md.department_id
+      WHERE md.member_id = $1
+      ORDER BY d.sort_order, lower(d.name)`,
+    [memberId],
+  );
+  return { ...row, other_department_names: others.map((other) => other.name) };
 }
 
-function snapshot(row: MemberSnapshotRow) {
+/**
+ * Audit snapshot of a member. "other_departments" is included when the member
+ * has any (or when the caller asks, so an edit that adds or removes them shows
+ * both sides), which keeps history entries of members without them unchanged.
+ */
+function snapshot(row: MemberSnapshotRow, includeOthers = row.other_department_names.length > 0) {
   return {
     member_code: memberCode(row.member_number),
     full_name: row.full_name,
     department: row.department_name,
+    ...(includeOthers ? { other_departments: row.other_department_names.join(", ") } : {}),
     position: row.position_name,
     status: row.status,
     email: row.email,
@@ -106,12 +137,24 @@ function refOf(row: MemberSnapshotRow): MemberRef {
   return { id: row.id, fullName: row.full_name, departmentId: row.department_id, departmentName: row.department_name };
 }
 
-async function lookupNames(tx: Queryable, departmentId: string, positionId: string) {
+async function lookupNames(tx: Queryable, departmentId: string, positionId: string, otherDepartmentIds: readonly string[]) {
   const [department] = await tx.query<{ id: string; name: string }>("SELECT id, name FROM departments WHERE id = $1", [departmentId]);
   if (!department) throw new ActionError("Select a valid department.");
   const [position] = await tx.query<{ id: string; name: string }>("SELECT id, name FROM positions WHERE id = $1", [positionId]);
   if (!position) throw new ActionError("Select a valid position/role.");
+  for (const id of otherDepartmentIds) {
+    const [other] = await tx.query<{ id: string }>("SELECT id FROM departments WHERE id = $1", [id]);
+    if (!other) throw new ActionError("One of the other departments no longer exists. Reload the page and try again.");
+  }
   return { department, position };
+}
+
+/** Replaces a member's other departments (the list never includes the main department). */
+async function saveOtherDepartments(tx: Queryable, memberId: string, departmentIds: readonly string[]) {
+  await tx.query("DELETE FROM member_departments WHERE member_id = $1", [memberId]);
+  for (const departmentId of departmentIds) {
+    await tx.query("INSERT INTO member_departments (member_id, department_id) VALUES ($1, $2)", [memberId, departmentId]);
+  }
 }
 
 /* ---------------------------------- Add member ---------------------------------- */
@@ -130,13 +173,16 @@ export async function createMemberAction(input: MemberFormInput): Promise<Action
     const defaultPeriod = settings?.default_documentation_period ?? "";
 
     const created = await withTransaction(async (tx) => {
-      const { department, position } = await lookupNames(tx, value.departmentId, value.positionId);
+      const otherDepartmentIds = value.otherDepartmentIds ?? [];
+      const { department, position } = await lookupNames(tx, value.departmentId, value.positionId, otherDepartmentIds);
       const [member] = await tx.query<{ id: string; member_number: number }>(
         `INSERT INTO members (full_name, department_id, position_id, email, status, start_date, deactivated_at)
          VALUES ($1, $2, $3, $4, $5, $6::date, CASE WHEN $5 = 'inactive' THEN now() END)
          RETURNING id, member_number`,
         [value.fullName, department.id, position.id, value.email, value.status, value.startDate],
       );
+      await saveOtherDepartments(tx, member.id, otherDepartmentIds);
+      const saved = await loadMemberForUpdate(tx, member.id);
       await tx.query("INSERT INTO member_credentials (member_id, password_hash) VALUES ($1, $2)", [member.id, passwordHash]);
       const documents = await tx.query<{ id: string; document_type: DocumentType }>(
         `INSERT INTO member_documentation (member_id, document_type, period, last_edited_by_type, last_edited_by_name)
@@ -154,15 +200,7 @@ export async function createMemberAction(input: MemberFormInput): Promise<Action
         entityType: "member",
         recordId: member.id,
         summary: "Created member account",
-        next: {
-          member_code: code,
-          full_name: value.fullName,
-          department: department.name,
-          position: position.name,
-          status: value.status,
-          email: value.email,
-          start_date: value.startDate,
-        },
+        next: snapshot(saved),
         notification: {
           type: "member.created",
           description: `${actor.name} created a member account for ${value.fullName} (${department.name}).`,
@@ -188,7 +226,7 @@ export async function createMemberAction(input: MemberFormInput): Promise<Action
         id: member.id,
         fullName: value.fullName,
         memberCode: code,
-        departmentName: department.name,
+        departmentName: formatDepartments(department.name, saved.other_department_names),
         positionName: position.name,
         status: value.status,
       };
@@ -213,7 +251,7 @@ export async function updateMemberAction(memberId: string, input: MemberFormInpu
 
     await withTransaction(async (tx) => {
       const before = await loadMemberForUpdate(tx, memberId);
-      const { department, position } = await lookupNames(tx, value.departmentId, value.positionId);
+      const { department, position } = await lookupNames(tx, value.departmentId, value.positionId, value.otherDepartmentIds ?? []);
       await tx.query(
         `UPDATE members
             SET full_name = $2, department_id = $3, position_id = $4, email = $5, status = $6, start_date = $7::date,
@@ -222,11 +260,19 @@ export async function updateMemberAction(memberId: string, input: MemberFormInpu
           WHERE id = $1`,
         [memberId, value.fullName, department.id, position.id, value.email, value.status, value.startDate],
       );
+      if (value.otherDepartmentIds !== null) {
+        await saveOtherDepartments(tx, memberId, value.otherDepartmentIds);
+      } else {
+        // Request without the field (for example from a page loaded before this feature existed):
+        // keep the other departments, but never list the new main department among them.
+        await tx.query("DELETE FROM member_departments WHERE member_id = $1 AND department_id = $2", [memberId, department.id]);
+      }
       const after = await loadMemberForUpdate(tx, memberId);
       if (value.status === "inactive") await tx.query("DELETE FROM sessions WHERE member_id = $1", [memberId]);
 
-      const { status: statusBefore, ...restBefore } = snapshot(before);
-      const { status: statusAfter, ...restAfter } = snapshot(after);
+      const includeOthers = before.other_department_names.length > 0 || after.other_department_names.length > 0;
+      const { status: statusBefore, ...restBefore } = snapshot(before, includeOthers);
+      const { status: statusAfter, ...restAfter } = snapshot(after, includeOthers);
       await recordAudit(tx, {
         actor,
         member: refOf(after),
@@ -345,7 +391,7 @@ export async function resetMemberPasswordAction(memberId: string): Promise<Actio
         id: member.id,
         fullName: member.full_name,
         memberCode: memberCode(member.member_number),
-        departmentName: member.department_name,
+        departmentName: formatDepartments(member.department_name, member.other_department_names),
         positionName: member.position_name,
         status: member.status,
         password,

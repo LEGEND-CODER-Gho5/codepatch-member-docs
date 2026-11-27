@@ -167,3 +167,8 @@ export function initials(name: string): string {
 export function memberCode(memberNumber: number | string): string {
   return `CPS-${memberNumber}`;
 }
+
+/** A member's main department followed by any other departments, e.g. "Coding Department, Math Department". */
+export function formatDepartments(mainDepartment: string, otherDepartments: readonly string[] = []): string {
+  return [mainDepartment, ...otherDepartments].join(", ");
+}

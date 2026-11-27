@@ -28,7 +28,8 @@ export function DirectoryBoard({ departments, currentMemberId }: { departments: 
       })),
     [departments, needle],
   );
-  const matches = filtered.reduce((sum, department) => sum + department.visible.length, 0);
+  // A member in several departments appears in several columns but counts once.
+  const matches = new Set(filtered.flatMap((department) => department.visible.map((member) => member.id))).size;
 
   return (
     <div>

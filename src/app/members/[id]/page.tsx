@@ -7,6 +7,7 @@ import { LiveRefresh } from "@/components/realtime";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/primitives";
+import { formatDepartments } from "@/lib/format";
 import { getViewer } from "@/lib/server/auth";
 import { getDocumentRecord, getWorkspaceMember, listDocumentSummaries } from "@/lib/server/queries";
 import { getOrgInfo } from "@/lib/server/settings";
@@ -54,7 +55,7 @@ export default async function MemberWorkspacePage({
             <div className="min-w-0">
               <h1 className="truncate text-[19px] leading-tight font-semibold tracking-[-0.01em] text-zinc-950">{member.fullName}</h1>
               <p className="mt-0.5 truncate text-[12.5px] text-zinc-500">
-                {member.positionName} · {member.departmentName} · <span className="font-mono">{member.memberCode}</span>
+                {member.positionName} · {formatDepartments(member.departmentName, member.otherDepartmentNames)} · <span className="font-mono">{member.memberCode}</span>
               </p>
             </div>
           </div>

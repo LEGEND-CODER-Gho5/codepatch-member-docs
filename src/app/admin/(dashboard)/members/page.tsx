@@ -29,6 +29,7 @@ export default async function MembersPage() {
           startDate: member.startDate,
           departmentId: member.departmentId,
           departmentName: member.departmentName,
+          otherDepartments: member.otherDepartments,
           positionId: member.positionId,
           positionName: member.positionName,
           hoursTotal: member.hoursTotal,

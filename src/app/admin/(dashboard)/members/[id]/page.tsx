@@ -6,7 +6,7 @@ import { ActivityList } from "@/components/admin/activity-list";
 import { MemberProfileActions } from "@/components/admin/member-actions";
 import { Avatar, KeyValue, PageHeader, Panel, StatusBadge } from "@/components/ui/primitives";
 import { DOCUMENT_TYPE_LABEL } from "@/lib/document-text";
-import { formatDateTime, formatHours, formatPlainDate } from "@/lib/format";
+import { formatDateTime, formatDepartments, formatHours, formatPlainDate } from "@/lib/format";
 import { requireAdminPage } from "@/lib/server/auth";
 import { getMember, listDocumentSummaries, listRecentActivity } from "@/lib/server/queries";
 import type { DocumentType } from "@/lib/types";
@@ -36,13 +36,17 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             <StatusBadge status={member.status} />
           </span>
         }
-        description={`${member.positionName} · ${member.departmentName} · ${member.memberCode}`}
+        description={`${member.positionName} · ${formatDepartments(
+          member.departmentName,
+          member.otherDepartments.map((other) => other.name),
+        )} · ${member.memberCode}`}
         actions={
           <MemberProfileActions
             member={{
               id: member.id,
               fullName: member.fullName,
               departmentId: member.departmentId,
+              otherDepartmentIds: member.otherDepartments.map((other) => other.id),
               positionId: member.positionId,
               status: member.status,
               email: member.email,
@@ -60,7 +64,14 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                 <span className="font-mono">{member.memberCode}</span>
               </KeyValue>
               <KeyValue label="Full name">{member.fullName}</KeyValue>
-              <KeyValue label="Department">{member.departmentName}</KeyValue>
+              <KeyValue label="Main department">{member.departmentName}</KeyValue>
+              <KeyValue label="Other departments">
+                {member.otherDepartments.length > 0 ? (
+                  member.otherDepartments.map((other) => other.name).join(", ")
+                ) : (
+                  <span className="text-zinc-400">None</span>
+                )}
+              </KeyValue>
               <KeyValue label="Position/Role">{member.positionName}</KeyValue>
               <KeyValue label="Status">
                 <StatusBadge status={member.status} />

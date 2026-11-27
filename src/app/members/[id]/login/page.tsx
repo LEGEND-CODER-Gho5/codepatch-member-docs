@@ -7,6 +7,7 @@ import { PasswordLoginForm } from "@/components/password-login-form";
 import { SiteHeader } from "@/components/site-header";
 import { buttonStyles } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/primitives";
+import { formatDepartments } from "@/lib/format";
 import { requireSiteAccess } from "@/lib/server/auth";
 import { getWorkspaceMember } from "@/lib/server/queries";
 import { getOrgInfo } from "@/lib/server/settings";
@@ -38,7 +39,7 @@ export default async function MemberLoginPage({ params }: { params: Promise<{ id
               <div className="min-w-0">
                 <h1 className="truncate text-[16px] font-semibold text-zinc-950">{member.fullName}</h1>
                 <p className="truncate text-[12.5px] text-zinc-500">
-                  {member.positionName} · {member.departmentName}
+                  {member.positionName} · {formatDepartments(member.departmentName, member.otherDepartmentNames)}
                 </p>
               </div>
             </div>

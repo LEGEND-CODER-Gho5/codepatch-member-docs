@@ -10,6 +10,7 @@ const ORDER = [
   "member_code",
   "full_name",
   "department",
+  "other_departments",
   "position",
   "status",
   "email",

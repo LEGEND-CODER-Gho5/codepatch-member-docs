@@ -13,7 +13,12 @@
  * command-line scripts can load it directly with Node.js.
  */
 
-/** Tables created by this application. Permission changes are limited to these. */
+/**
+ * Tables created by migration 1. Migrations 1 and 2 build their SQL from this
+ * list, so it must never change: tables added by later migrations belong in
+ * LATER_APP_TABLES, and every table is in ALL_APP_TABLES. Permission changes
+ * are limited to this application's own tables.
+ */
 export const APP_TABLES = [
   "application_settings",
   "departments",
@@ -30,6 +35,14 @@ export const APP_TABLES = [
   "realtime_events",
   "schema_migrations",
 ] as const;
+
+/** Tables added after migration 1. Each migration that adds one also revokes Supabase's API roles itself. */
+export const LATER_APP_TABLES = [
+  "member_departments", // migration 4
+] as const;
+
+/** Every table this application creates, across all migrations. */
+export const ALL_APP_TABLES: readonly string[] = [...APP_TABLES, ...LATER_APP_TABLES];
 
 /** Sequences created by this application (member_number_seq and the bigserial columns). */
 export const APP_SEQUENCES = [
@@ -397,6 +410,40 @@ BEGIN
     RAISE EXCEPTION 'audit_logs record is sealed: merged edits are limited to 30 minutes from the first save';
   END IF;
   RETURN NEW;
+END;
+$$;
+`,
+  },
+  {
+    version: 4,
+    name: "member_extra_departments",
+    sql: /* sql */ `
+-- A member can belong to other departments besides their main one
+-- (members.department_id). The main department is still the one used for
+-- volunteer-hour totals per department, Edit History, and notifications; the
+-- application keeps the main department out of this list. Deleting a member
+-- removes their rows here; a department cannot be deleted while it is listed
+-- for any member. Existing members start with no other departments.
+CREATE TABLE member_departments (
+  member_id uuid NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  department_id uuid NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (member_id, department_id)
+);
+CREATE INDEX member_departments_department_idx ON member_departments (department_id);
+ALTER TABLE member_departments ENABLE ROW LEVEL SECURITY;
+
+-- As in migration 2: Supabase's Data API roles get no access to the new table.
+-- Where the roles do not exist this block changes nothing.
+DO $$
+DECLARE
+  api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+      EXECUTE format('REVOKE ALL ON TABLE member_departments FROM %I', api_role);
+    END IF;
+  END LOOP;
 END;
 $$;
 `,

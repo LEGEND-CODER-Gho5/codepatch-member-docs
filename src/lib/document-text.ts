@@ -88,6 +88,7 @@ export const FIELD_LABELS: Record<string, string> = {
   full_name: "Full Name",
   member_code: "Member ID",
   department: "Department",
+  other_departments: "Other Departments",
   position: "Position/Role",
   email: "Email Address",
   status: "Member Status",

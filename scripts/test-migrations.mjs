@@ -1,4 +1,4 @@
-// Tests for the migration runner and migration 2, using throwaway in-memory
+// Tests for the migration runner and migrations 2-4, using throwaway in-memory
 // PostgreSQL databases (PGlite). One database simulates Supabase: it has the
 // anon / authenticated / service_role roles, Supabase-style default privileges,
 // and a table belonging to another application.
@@ -7,8 +7,9 @@
 import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import {
+  ALL_APP_TABLES,
   APP_SEQUENCES,
-  APP_TABLES,
+  LATER_APP_TABLES,
   MIGRATIONS,
   MIGRATION_LOCK_ID,
   MIGRATION_LOCK_TIMEOUT,
@@ -72,7 +73,7 @@ await test("migrations apply once, in order, and a second run is a no-op", () =>
     assert.deepEqual(await applyMigrations(db, { advisoryLock: true }), []);
     assert.deepEqual(await readAppliedVersions(db), allVersions);
     await assertSchemaIsCurrent(db);
-    for (const name of [...APP_TABLES, ...APP_SEQUENCES]) {
+    for (const name of [...ALL_APP_TABLES, ...APP_SEQUENCES]) {
       assert.equal(await value(client, "SELECT to_regclass($1) IS NOT NULL", [name]), true, `${name} is missing`);
     }
   }));
@@ -88,18 +89,18 @@ async function migrateTo(client, count) {
   }
 }
 
-await test("a database at migration 1 is reported as pending migrations 2 and 3, then upgraded", () =>
+await test("a database at migration 1 is reported as pending migrations 2, 3 and 4, then upgraded", () =>
   withDatabase(async (client, db) => {
     await migrateTo(client, 1);
-    await assert.rejects(assertSchemaIsCurrent(db), /pending migrations: 2, 3.*npm run db:migrate/s);
-    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [2, 3]);
+    await assert.rejects(assertSchemaIsCurrent(db), /pending migrations: 2, 3, 4.*npm run db:migrate/s);
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [2, 3, 4]);
     await assertSchemaIsCurrent(db);
   }));
 
 await test("a database at migration 2 (an existing development database) gets migration 3, which caps merged audit edits", () =>
   withDatabase(async (client, db) => {
     await migrateTo(client, 2);
-    await assert.rejects(assertSchemaIsCurrent(db), /pending migration: 3/);
+    await assert.rejects(assertSchemaIsCurrent(db), /pending migrations: 3, 4/);
     const insert = () =>
       client.query(
         `INSERT INTO audit_logs (actor_type, actor_id, actor_name, action, entity_type, record_id, summary, new_values, occurred_at, last_occurred_at)
@@ -110,7 +111,7 @@ await test("a database at migration 2 (an existing development database) gets mi
     // Migration 1's trigger looks only at the last change, so this merge is still allowed.
     await client.query("UPDATE audit_logs SET new_values = '{\"a\":2}' WHERE id = $1", [before]);
 
-    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [3]);
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [3, 4]);
     await assertSchemaIsCurrent(db);
     const after = (await insert()).rows[0].id;
     await assert.rejects(client.query("UPDATE audit_logs SET new_values = '{\"a\":2}' WHERE id = $1", [after]), /limited to 30 minutes/);
@@ -119,6 +120,36 @@ await test("a database at migration 2 (an existing development database) gets mi
       "SELECT tgname FROM pg_trigger WHERE tgrelid = 'audit_logs'::regclass AND tgfoid = 'audit_logs_protect()'::regprocedure ORDER BY tgname",
     );
     assert.deepEqual(rows.map((row) => row.tgname), ["audit_logs_protect_rows", "audit_logs_protect_truncate"]);
+  }));
+
+await test("a database at migration 3 (with members) gets migration 4: other departments start empty and keep integrity", () =>
+  withDatabase(async (client, db) => {
+    await migrateTo(client, 3);
+    await assert.rejects(assertSchemaIsCurrent(db), /pending migration: 4/);
+    const [coding, math, art] = (
+      await client.query("INSERT INTO departments (name) VALUES ('Coding'), ('Math'), ('Art') RETURNING id")
+    ).rows.map((row) => row.id);
+    const position = (await client.query("INSERT INTO positions (name) VALUES ('Member') RETURNING id")).rows[0].id;
+    const member = (
+      await client.query("INSERT INTO members (full_name, department_id, position_id) VALUES ('Ada', $1, $2) RETURNING id", [coding, position])
+    ).rows[0].id;
+
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [4]);
+    await assertSchemaIsCurrent(db);
+    assert.equal(await value(client, "SELECT count(*)::int FROM members"), 1, "existing members are kept");
+    assert.equal(await value(client, "SELECT department_id FROM members WHERE id = $1", [member]), coding, "main department unchanged");
+    assert.equal(await value(client, "SELECT count(*)::int FROM member_departments"), 0, "nobody starts with other departments");
+
+    await client.query("INSERT INTO member_departments (member_id, department_id) VALUES ($1, $2), ($1, $3)", [member, math, art]);
+    await assert.rejects(
+      client.query("INSERT INTO member_departments (member_id, department_id) VALUES ($1, $2)", [member, math]),
+      /duplicate key/,
+      "the same other department cannot be listed twice",
+    );
+    await assert.rejects(client.query("DELETE FROM departments WHERE id = $1", [math]), /foreign key/, "a listed department cannot be deleted");
+    await client.query("DELETE FROM members WHERE id = $1", [member]);
+    assert.equal(await value(client, "SELECT count(*)::int FROM member_departments"), 0, "deleting a member removes their rows");
+    await client.query("DELETE FROM departments WHERE id = $1", [math]);
   }));
 
 await test(`migrations set a ${MIGRATION_LOCK_TIMEOUT} lock timeout first, and stop cleanly when a lock is not granted in time`, async () => {
@@ -210,9 +241,10 @@ await test("Supabase simulation: API roles lose all access to the app's objects 
 
     await applyMigrations(db, { advisoryLock: true });
     assert.deepEqual(await readAppliedVersions(db), allVersions, "includes migration 3, which replaces the audit function");
+    assert.ok(LATER_APP_TABLES.length > 0 && LATER_APP_TABLES.every((table) => ALL_APP_TABLES.includes(table)));
 
     for (const role of API_ROLES) {
-      for (const table of APP_TABLES) {
+      for (const table of ALL_APP_TABLES) {
         assert.equal(
           await value(client, "SELECT has_table_privilege($1, $2, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')", [role, table]),
           false,
@@ -239,7 +271,7 @@ await test("Supabase simulation: API roles lose all access to the app's objects 
     assert.equal(await value(client, "SELECT has_sequence_privilege('anon', 'other_app_items_id_seq', 'USAGE')"), true);
 
     // Row Level Security stays enabled on every application table.
-    const { rows } = await client.query("SELECT relname FROM pg_class WHERE relname = ANY($1) AND NOT relrowsecurity", [APP_TABLES]);
+    const { rows } = await client.query("SELECT relname FROM pg_class WHERE relname = ANY($1) AND NOT relrowsecurity", [[...ALL_APP_TABLES]]);
     assert.deepEqual(rows, [], "tables without RLS");
   }));
 

@@ -134,7 +134,7 @@ export default async function AdminOverviewPage() {
       <Panel
         className="mt-6"
         title="Departments"
-        description="Member and volunteer-hour totals by department"
+        description="Members include those with it as an other department; volunteer hours count each member's main department only"
         actions={
           <Link href="/admin/departments" className="text-[12.5px] font-medium text-brand-700 hover:text-brand-900">
             Manage

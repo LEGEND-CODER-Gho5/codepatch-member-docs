@@ -32,14 +32,28 @@ function MemberFormFields({
   departments: DepartmentOption[];
   positions: PositionOption[];
 }) {
-  const set = (key: keyof MemberFormInput) => (event: { target: { value: string } }) => onChange({ ...value, [key]: event.target.value });
+  const set = (key: Exclude<keyof MemberFormInput, "otherDepartmentIds">) => (event: { target: { value: string } }) =>
+    onChange({ ...value, [key]: event.target.value });
+  // The main department is never also one of the other departments.
+  const setMainDepartment = (event: { target: { value: string } }) =>
+    onChange({
+      ...value,
+      departmentId: event.target.value,
+      otherDepartmentIds: value.otherDepartmentIds.filter((id) => id !== event.target.value),
+    });
+  const toggleOther = (id: string, checked: boolean) =>
+    onChange({
+      ...value,
+      otherDepartmentIds: checked ? [...value.otherDepartmentIds, id] : value.otherDepartmentIds.filter((other) => other !== id),
+    });
+  const otherChoices = departments.filter((department) => department.id !== value.departmentId);
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Full Name" htmlFor="member-name" className="sm:col-span-2">
         <Input id="member-name" value={value.fullName} onChange={set("fullName")} autoComplete="off" required maxLength={120} autoFocus />
       </Field>
-      <Field label="Department" htmlFor="member-department">
-        <Select id="member-department" value={value.departmentId} onChange={set("departmentId")} required>
+      <Field label="Main Department" htmlFor="member-department">
+        <Select id="member-department" value={value.departmentId} onChange={setMainDepartment} required>
           <option value="" disabled>
             Select department
           </option>
@@ -62,6 +76,30 @@ function MemberFormFields({
           ))}
         </Select>
       </Field>
+      {otherChoices.length > 0 && (
+        <fieldset className="space-y-1.5 sm:col-span-2">
+          <legend className="text-[13px] font-medium text-zinc-800">
+            Other Departments
+            <span className="ml-1 font-normal text-zinc-400">(optional)</span>
+          </legend>
+          <p className="text-[12px] text-zinc-500">
+            The member also appears in these directory columns. Volunteer-hour totals count only the main department.
+          </p>
+          <div className="grid gap-x-4 gap-y-1.5 pt-1 sm:grid-cols-2">
+            {otherChoices.map((department) => (
+              <label key={department.id} className="flex items-center gap-2 text-[13px] text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={value.otherDepartmentIds.includes(department.id)}
+                  onChange={(event) => toggleOther(department.id, event.target.checked)}
+                  className="size-4 rounded border-zinc-300 accent-brand-700"
+                />
+                {department.name}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <Field label="Member Status" htmlFor="member-status">
         <Select id="member-status" value={value.status} onChange={set("status")}>
           <option value="active">Active</option>
@@ -148,6 +186,7 @@ function blankForm(departments: DepartmentOption[], positions: PositionOption[])
   return {
     fullName: "",
     departmentId: departments[0]?.id ?? "",
+    otherDepartmentIds: [],
     positionId: defaultPosition?.id ?? "",
     status: "active",
     email: "",
@@ -272,6 +311,7 @@ export type EditableMember = {
   id: string;
   fullName: string;
   departmentId: string;
+  otherDepartmentIds: string[];
   positionId: string;
   status: MemberStatus;
   email: string | null;
@@ -296,6 +336,7 @@ export function EditMemberDialog({
       ? {
           fullName: member.fullName,
           departmentId: member.departmentId,
+          otherDepartmentIds: member.otherDepartmentIds,
           positionId: member.positionId,
           status: member.status,
           email: member.email ?? "",

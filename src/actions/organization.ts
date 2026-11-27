@@ -91,6 +91,17 @@ export async function deleteDepartmentAction(id: string): Promise<ActionResult<n
           "conflict",
         );
       }
+      const [{ count: otherCount }] = await tx.query<{ count: number }>(
+        "SELECT count(*)::int AS count FROM member_departments WHERE department_id = $1",
+        [id],
+      );
+      if (otherCount > 0) {
+        throw new ActionError(
+          `${otherCount} member${otherCount === 1 ? " lists" : "s list"} this as one of their other departments (including inactive). ` +
+            "Remove it from their profiles first.",
+          "conflict",
+        );
+      }
       await tx.query("DELETE FROM departments WHERE id = $1", [id]);
       await recordAudit(tx, {
         actor,

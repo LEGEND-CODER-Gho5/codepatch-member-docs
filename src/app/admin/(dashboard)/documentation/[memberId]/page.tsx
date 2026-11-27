@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DocumentWorkspace } from "@/components/documents/workspace";
 import { ButtonLink } from "@/components/ui/button";
 import { Avatar, PageHeader, StatusBadge } from "@/components/ui/primitives";
+import { formatDepartments } from "@/lib/format";
 import { requireAdminPage } from "@/lib/server/auth";
 import { getDocumentRecord, getWorkspaceMember, listDocumentSummaries, listRecentActivity } from "@/lib/server/queries";
 import { getOrgInfo } from "@/lib/server/settings";
@@ -48,7 +49,7 @@ export default async function AdminMemberDocumentationPage({
               {member.status === "inactive" && <StatusBadge status="inactive" />}
             </span>
           }
-          description={`${member.positionName} · ${member.departmentName} · ${member.memberCode}`}
+          description={`${member.positionName} · ${formatDepartments(member.departmentName, member.otherDepartmentNames)} · ${member.memberCode}`}
           actions={
             <ButtonLink href={`/admin/members/${member.id}`}>
               <UserRound />

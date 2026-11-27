@@ -44,7 +44,8 @@ All three are verified on the server, stored only as scrypt hashes, and versione
 
 ## Features
 
-- **Member directory** — department columns with live member and department counts (from the database), search, and real-time updates when members are added, moved, edited, deactivated, or deleted.
+- **Member directory** — department columns with live member and department counts (from the database), search, and real-time updates when members are added, moved, edited, deactivated, or deleted. A member can belong to several departments: one main department plus any number of other departments, and appears in each of those columns.
+- **Departments and totals** — department member counts include members for whom it is an other department. Volunteer-hour totals per department, Edit History, and notifications use each member's main department, so no hour is counted twice.
 - **Documentation workspace** — both PDF formats as interactive documents with autosave (debounced, per-field), explicit Save, print layouts that mirror the paper forms, multiple records per period, dated contribution entries, an expandable hours table, and an automatically calculated **Total Volunteer Hours**. Member Name, Chapter, Position/Role, and Organization fill in automatically from the member profile.
 - **Exact PDF wording** — every label, heading, and the certification statement are kept verbatim in [`src/lib/document-text.ts`](src/lib/document-text.ts). The PDF's temporary instruction ("Please jot down how you contributed here…") appears only as on-screen guidance, never as stored or printed content.
 - **Administrator dashboard** — Overview (live statistics, recent member activity, notifications, department totals), Member Management (search; department, position, and status filters; add, edit, deactivate/reactivate, delete, reset password), Documentation Management (per-member view and an all-entries feed with filters; open and edit any record without a member password; version history and restore), Edit History, Notifications, Department Management, and Settings.
@@ -75,7 +76,8 @@ Defined in [`src/lib/server/migrations.ts`](src/lib/server/migrations.ts) (`npm 
 | --- | --- |
 | `application_settings` | Organization info, shared/admin password hashes and versions, session preferences (single row) |
 | `departments`, `positions` | Admin-managed options (unique names, display order) |
-| `members` | Member records (`member_number` for the `CPS-####` ID, department, position, email, status, start date) |
+| `members` | Member records (`member_number` for the `CPS-####` ID, main department, position, email, status, start date) |
+| `member_departments` | Other departments a member also belongs to (never the main one) |
 | `member_credentials` | Member password hash, version, last sign-in |
 | `member_documentation` | Both document types: period, verification fields, submission dates |
 | `contribution_entries` | Dated contribution entries of a Member Documentation |
@@ -201,6 +203,7 @@ with app_names(name) as (
     ('application_settings'), ('departments'), ('positions'), ('members'), ('member_credentials'),
     ('member_documentation'), ('contribution_entries'), ('volunteer_hours'), ('audit_logs'),
     ('notifications'), ('sessions'), ('login_attempts'), ('realtime_events'), ('schema_migrations'),
+    ('member_departments'),
     ('member_number_seq'), ('audit_logs_id_seq'), ('notifications_id_seq'), ('login_attempts_id_seq'),
     ('realtime_events_id_seq'),
     ('departments_name_unique'), ('positions_name_unique'), ('members_department_idx'), ('members_status_idx'),
@@ -209,12 +212,12 @@ with app_names(name) as (
     ('audit_logs_member_idx'), ('audit_logs_document_idx'), ('audit_logs_record_idx'),
     ('notifications_recent_idx'), ('notifications_unread_idx'), ('notifications_audit_idx'),
     ('sessions_member_idx'), ('sessions_expires_idx'), ('login_attempts_key_idx'), ('login_attempts_ip_idx'),
-    ('realtime_events_created_idx'),
+    ('realtime_events_created_idx'), ('member_departments_department_idx'),
     ('application_settings_pkey'), ('departments_pkey'), ('positions_pkey'), ('members_pkey'),
     ('members_member_number_key'), ('member_credentials_pkey'), ('member_documentation_pkey'),
     ('contribution_entries_pkey'), ('volunteer_hours_pkey'), ('audit_logs_pkey'), ('notifications_pkey'),
     ('sessions_pkey'), ('sessions_token_hash_key'), ('login_attempts_pkey'), ('realtime_events_pkey'),
-    ('schema_migrations_pkey')
+    ('schema_migrations_pkey'), ('member_departments_pkey')
 ),
 taken as (
   select c.relname::text as name,
@@ -252,7 +255,7 @@ union all
 select 6, 'Name already used in schema public: ' || name, kind, 'STOP'
 from taken
 union all
-select 6, 'Names for 14 tables, 5 sequences, 37 indexes', 'all free', 'OK'
+select 6, 'Names for 15 tables, 5 sequences, 39 indexes', 'all free', 'OK'
 where not exists (select 1 from taken)
 union all
 select 7, 'Type name already used in schema public: ' || t.typname, 'type', 'STOP'
@@ -276,11 +279,12 @@ select 10, 'Tables already in schema public (left untouched)',
 order by step, item;
 ```
 
-Step 6 covers all 56 names the migrations create in `public`: 14 tables, 5 sequences, and 37 indexes, including the implicit
+Step 6 covers all 59 names the migrations create in `public`: 15 tables, 5 sequences, and 39 indexes, including the implicit
 primary-key and unique-constraint indexes. Most clashes would only make the migration fail and roll back, but PostgreSQL silently
 renames an automatically created sequence or index whose name is taken, and `CREATE TABLE IF NOT EXISTS` would silently reuse an
 existing `schema_migrations` table, so every clash is a STOP. Step 7 catches a standalone type (such as an enum) with one of those
-names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names.
+names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names; migration 4 adds the
+`member_departments` table and its two indexes (included above).
 
 1. **Connection strings.** In the Supabase dashboard, open **Connect** and copy two Supavisor pooler URIs: the **session pooler**
    (port `5432`, for running migrations) and the **transaction pooler** (port `6543`, for the deployed app). The user name has the
@@ -306,7 +310,7 @@ names, and step 8 the audit trigger function. Migration 3 replaces that function
    `db:status` prints the Target line (host, port, database, Supabase project ref, TLS mode) and `DATABASE_URL from:` (it must
    name your env file). Check both before migrating; `db:migrate` runs only when `--confirm-target` matches that project ref.
 
-5. In **Table Editor**, confirm the 14 tables exist and are empty (`schema_migrations` has one row per migration). The first app
+5. In **Table Editor**, confirm the 15 tables exist and are empty (`schema_migrations` has one row per migration). The first app
    start then creates the settings row from `INITIAL_*` and seeds departments and positions. No members are ever seeded.
 
 If verification fails, the error explains the cause (missing CA certificate, host-name mismatch, IPv6-only host, wrong password,

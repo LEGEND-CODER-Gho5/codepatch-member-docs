@@ -21,6 +21,7 @@ export type MemberTableRow = {
   startDate: string | null;
   departmentId: string;
   departmentName: string;
+  otherDepartments: { id: string; name: string }[];
   positionId: string;
   positionName: string;
   hoursTotal: number;
@@ -51,7 +52,7 @@ export function MembersTable({
           member.fullName.toLowerCase().includes(needle) ||
           member.memberCode.toLowerCase().includes(needle) ||
           (member.email ?? "").toLowerCase().includes(needle)) &&
-        (!department || member.departmentId === department) &&
+        (!department || member.departmentId === department || member.otherDepartments.some((other) => other.id === department)) &&
         (!position || member.positionId === position) &&
         (!status || member.status === status),
     );
@@ -160,7 +161,14 @@ export function MembersTable({
                         </span>
                       </Link>
                     </td>
-                    <td className={cn(tableStyles.td, "whitespace-nowrap")}>{member.departmentName}</td>
+                    <td className={cn(tableStyles.td, "whitespace-nowrap")}>
+                      {member.departmentName}
+                      {member.otherDepartments.length > 0 && (
+                        <span className="block text-[12px] text-zinc-500">
+                          also {member.otherDepartments.map((other) => other.name).join(", ")}
+                        </span>
+                      )}
+                    </td>
                     <td className={cn(tableStyles.td, "whitespace-nowrap")}>{member.positionName}</td>
                     <td className={tableStyles.td}>
                       <StatusBadge status={member.status} />
@@ -188,6 +196,7 @@ export function MembersTable({
                                 id: member.id,
                                 fullName: member.fullName,
                                 departmentId: member.departmentId,
+                                otherDepartmentIds: member.otherDepartments.map((other) => other.id),
                                 positionId: member.positionId,
                                 status: member.status,
                                 email: member.email,

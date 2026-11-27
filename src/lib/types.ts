@@ -53,6 +53,8 @@ export type WorkspaceMember = {
   memberCode: string;
   positionName: string;
   departmentName: string;
+  /** Departments besides the main one, in display order. */
+  otherDepartmentNames: string[];
   status: MemberStatus;
 };
 
