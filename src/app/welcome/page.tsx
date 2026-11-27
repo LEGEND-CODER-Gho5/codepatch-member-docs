@@ -6,6 +6,7 @@ import { AcceptRulesForm } from "@/components/accept-rules-form";
 import { Wordmark } from "@/components/brand";
 import { RulesText } from "@/components/rules-text";
 import { buttonStyles, ButtonLink } from "@/components/ui/button";
+import { SeasonFlourish } from "@/components/season/season-icons";
 import { formatDateLong } from "@/lib/format";
 import { getViewer } from "@/lib/server/auth";
 import { getOrgInfo, getSettings } from "@/lib/server/settings";
@@ -46,8 +47,9 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="text-[13px] font-medium text-brand-700">
           {org.organizationName}, {org.chapterName}
         </p>
-        <h1 data-large-title="Welcome" className="mt-1.5 font-serif text-[32px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950">
+        <h1 data-large-title="Welcome" className="season-display mt-1.5 font-serif text-[32px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950">
           Welcome to the member portal
+          <SeasonFlourish />
         </h1>
         <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-zinc-600">
           {mustAccept

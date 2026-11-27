@@ -669,6 +669,109 @@
   }
 }
 
+/* ---------------------------- Seasonal theme ----------------------------
+ * While a holiday shows (data-holiday on <html>, from src/lib/season.ts) and
+ * Seasonal decorations is on (data-decor), the whole site dresses for it, not
+ * only the banner: headlines take the holiday typeface and a deep holiday ink,
+ * the "CP" mark wears a leaf or a snowflake, big headlines end with one, top
+ * bars get a thin trim in the season's colors, and the admin sidebar's
+ * highlight and text selection take its colors. Screen only: printouts stay
+ * exactly as the forms. Buttons and links keep the chapter's purple. */
+:root {
+  --season-ink-thanksgiving: #5c2c14;
+  --season-ink-winter: #15402f;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --season-ink-thanksgiving: #f1d3ac;
+    --season-ink-winter: #d3e9df;
+  }
+}
+@media screen {
+  :root[data-theme="dark"] {
+    --season-ink-thanksgiving: #f1d3ac;
+    --season-ink-winter: #d3e9df;
+  }
+}
+
+/* Pieces that belong to one season are hidden until that season shows. */
+.season-only-thanksgiving,
+.season-only-winter,
+.season-ribbon {
+  display: none;
+}
+
+@media screen {
+  :root[data-holiday="thanksgiving"]:not([data-decor="off"]) {
+    --season-font: var(--font-fraunces);
+    --season-font-settings: "SOFT" 60;
+    --season-ink: var(--season-ink-thanksgiving);
+    --season-ribbon: repeating-linear-gradient(
+      90deg,
+      var(--autumn-ember) 0 28px,
+      var(--autumn-amber) 28px 56px,
+      var(--autumn-gold) 56px 84px,
+      var(--autumn-olive) 84px 112px,
+      var(--autumn-cranberry) 112px 140px
+    );
+    --season-selection: rgb(217 119 6 / 0.28);
+    --season-nav-icon: #f0a030;
+    --season-nav-bar: #ea6a2a;
+    --season-stitch: rgb(253 211 120 / 0.62);
+  }
+  :root[data-holiday="winter"]:not([data-decor="off"]) {
+    --season-font: var(--font-playfair);
+    --season-font-settings: normal;
+    --season-ink: var(--season-ink-winter);
+    --season-ribbon: repeating-linear-gradient(
+      90deg,
+      var(--winter-pine) 0 28px,
+      var(--winter-berry) 28px 56px,
+      var(--winter-frost) 56px 84px,
+      var(--winter-pine-light) 84px 112px
+    );
+    --season-selection: rgb(107 152 189 / 0.32);
+    --season-nav-icon: #bcd8ee;
+    --season-nav-bar: #e0476a;
+    --season-stitch: rgb(224 238 250 / 0.72);
+  }
+
+  :root[data-holiday="thanksgiving"]:not([data-decor="off"]) .season-only-thanksgiving,
+  :root[data-holiday="winter"]:not([data-decor="off"]) .season-only-winter {
+    display: inline-flex;
+  }
+
+  /* Headlines: the holiday typeface in the holiday ink. */
+  :root[data-holiday]:not([data-decor="off"]) .season-display {
+    font-family: var(--season-font), ui-serif, Georgia, "Times New Roman", serif;
+    font-variation-settings: var(--season-font-settings);
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--season-ink);
+  }
+  /* The typeface alone, for headlines on an always-dark panel. */
+  :root[data-holiday]:not([data-decor="off"]) .season-font {
+    font-family: var(--season-font), ui-serif, Georgia, "Times New Roman", serif;
+    font-variation-settings: var(--season-font-settings);
+  }
+
+  :root[data-holiday]:not([data-decor="off"]) .season-ribbon {
+    display: block;
+    background: var(--season-ribbon);
+  }
+  :root[data-holiday]:not([data-decor="off"]) .brand-stitch {
+    border-color: var(--season-stitch);
+  }
+  :root[data-holiday]:not([data-decor="off"]) .season-nav-icon {
+    color: var(--season-nav-icon);
+  }
+  :root[data-holiday]:not([data-decor="off"]) .season-nav-bar {
+    background-color: var(--season-nav-bar);
+  }
+  :root[data-holiday]:not([data-decor="off"]) ::selection {
+    background-color: var(--season-selection);
+  }
+}
+
 /* ---------------------------- Accessibility -----------------------------
  * Choices from the Display & accessibility panel: data-* attributes on
  * <html>, set on the server before the page draws (src/lib/preferences.ts).

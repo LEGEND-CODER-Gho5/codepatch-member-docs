@@ -28,6 +28,7 @@ import { cn } from "@/lib/cn";
 import type { DepartmentOption, NotificationItem, OrgInfo, PositionOption } from "@/lib/types";
 import { AddMemberDialog } from "./member-dialogs";
 import { HeaderTools } from "@/components/preferences/header-tools";
+import { SeasonRibbon } from "@/components/season/season-icons";
 import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
 
@@ -70,8 +71,8 @@ function Navigation({ unread, onNavigate }: { unread: number; onNavigate?: () =>
               active ? "bg-white/[0.07] text-white" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100",
             )}
           >
-            {active && <span aria-hidden className="absolute top-1.5 bottom-1.5 -left-3 w-[3px] rounded-r bg-brand-400" />}
-            <Icon className={cn("size-4 shrink-0", active ? "text-brand-300" : "text-zinc-500 group-hover:text-zinc-300")} />
+            {active && <span aria-hidden className="season-nav-bar absolute top-1.5 bottom-1.5 -left-3 w-[3px] rounded-r bg-brand-400" />}
+            <Icon className={cn("size-4 shrink-0", active ? "season-nav-icon text-brand-300" : "text-zinc-500 group-hover:text-zinc-300")} />
             <span className="flex-1 truncate">{item.label}</span>
             {item.href === "/admin/notifications" && unread > 0 && (
               <span className="tabular rounded-full bg-brand-500 px-1.5 text-[11px] leading-[18px] font-semibold text-white">
@@ -210,6 +211,7 @@ export function AdminShell({
             </Button>
             <NotificationBell unread={unread} notifications={notifications} />
           </div>
+          <SeasonRibbon />
         </header>
 
         <main className="px-4 py-6 sm:px-6 lg:px-8 print:p-0">{children}</main>

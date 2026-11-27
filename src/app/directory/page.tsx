@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DirectoryBoard } from "@/components/directory-board";
 import { LiveRefresh } from "@/components/realtime";
 import { SeasonBanner } from "@/components/season/season-banner";
+import { SeasonFlourish } from "@/components/season/season-icons";
 import { SiteHeader } from "@/components/site-header";
 import { requireSiteAccess } from "@/lib/server/auth";
 import { formatHours } from "@/lib/format";
@@ -24,9 +25,10 @@ export default async function DirectoryPage() {
             <p className="text-[12px] font-medium text-zinc-500">{org.chapterName}</p>
             <h1
               data-large-title="Member Directory"
-              className="mt-1 font-serif text-[30px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950 sm:text-[32px]"
+              className="season-display mt-1 font-serif text-[30px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950 sm:text-[32px]"
             >
               Member Directory
+              <SeasonFlourish />
             </h1>
             <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-zinc-600">
               Select your name to open your documentation. You will be asked for your personal password.
@@ -35,15 +37,15 @@ export default async function DirectoryPage() {
           <dl className="flex divide-x divide-zinc-200 rounded-lg border border-zinc-200 bg-zinc-50/60">
             <div className="px-5 py-2.5">
               <dt className="text-[12px] font-medium text-zinc-500">Hours volunteered</dt>
-              <dd className="tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{formatHours(chapterHours)}</dd>
+              <dd className="season-display tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{formatHours(chapterHours)}</dd>
             </div>
             <div className="px-5 py-2.5">
               <dt className="text-[12px] font-medium text-zinc-500">Active members</dt>
-              <dd className="tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{directory.totalActive}</dd>
+              <dd className="season-display tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{directory.totalActive}</dd>
             </div>
             <div className="px-5 py-2.5">
               <dt className="text-[12px] font-medium text-zinc-500">Departments</dt>
-              <dd className="tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{directory.departments.length}</dd>
+              <dd className="season-display tabular font-serif text-[26px] leading-tight font-medium text-zinc-950">{directory.departments.length}</dd>
             </div>
           </dl>
         </div>

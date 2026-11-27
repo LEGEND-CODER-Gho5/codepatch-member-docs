@@ -59,7 +59,7 @@ export default async function MemberWorkspacePage({
           <div className="flex min-w-0 items-center gap-3">
             <Avatar name={member.fullName} className="size-10 text-[13px]" />
             <div className="min-w-0">
-              <h1 data-large-title={member.fullName} className="truncate font-serif text-[24px] leading-tight font-medium tracking-[-0.01em] text-zinc-950 sm:text-[26px]">
+              <h1 data-large-title={member.fullName} className="season-display truncate font-serif text-[24px] leading-tight font-medium tracking-[-0.01em] text-zinc-950 sm:text-[26px]">
                 {greeting()}, {firstName}
               </h1>
               <p className="mt-0.5 truncate text-[12.5px] text-zinc-500">

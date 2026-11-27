@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/brand";
 import { LiveIndicator } from "@/components/realtime";
 import { buttonStyles } from "@/components/ui/button";
 import { HeaderTools } from "@/components/preferences/header-tools";
+import { SeasonRibbon } from "@/components/season/season-icons";
 import { CompactTitle } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { Viewer } from "@/lib/server/auth";
@@ -88,6 +89,7 @@ export function SiteHeader({
       <nav aria-label="Primary" className="flex gap-1 overflow-x-auto border-t border-white/5 px-3 py-1.5 md:hidden">
         {links}
       </nav>
+      <SeasonRibbon />
     </header>
   );
 }

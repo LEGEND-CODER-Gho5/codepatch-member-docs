@@ -55,7 +55,7 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
         </div>
         {season && (
           <div data-season="" className={cn("-mx-4", season.id === "winter" ? "winter-on-dark" : "autumn-on-dark")}>
-            <p className="mb-2 px-4 font-serif text-[17px] text-zinc-300">{season.title}</p>
+            <p className="season-font mb-2 px-4 font-serif text-[17px] text-zinc-300">{season.title}</p>
             <SeasonGarland id={season.id} className="h-auto w-full max-w-[420px]" />
           </div>
         )}

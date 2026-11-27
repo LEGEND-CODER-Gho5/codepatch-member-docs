@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { SeasonFlourish } from "@/components/season/season-icons";
 import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
 
@@ -105,11 +106,12 @@ export function PageHeader({
           data-large-title={compactTitle ?? (typeof title === "string" ? title : undefined)}
           className={
             display
-              ? "font-serif text-[30px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950 sm:text-[34px]"
-              : "text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[21px] sm:font-semibold sm:tracking-[-0.01em]"
+              ? "season-display font-serif text-[30px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950 sm:text-[34px]"
+              : "season-display text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[21px] sm:font-semibold sm:tracking-[-0.01em]"
           }
         >
           {title}
+          {display && <SeasonFlourish />}
         </h1>
         {description && <p className={display ? "mt-2.5 max-w-2xl text-[15px] leading-relaxed text-zinc-600" : "mt-1 max-w-2xl text-[13.5px] text-zinc-600"}>{description}</p>}
       </div>

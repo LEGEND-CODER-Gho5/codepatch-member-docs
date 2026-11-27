@@ -23,7 +23,7 @@ export default async function AdminLoginPage() {
         <ArrowLeft className="size-4" />
         Back to directory
       </Link>
-      <h1 className="font-serif text-[26px] leading-tight font-medium tracking-[-0.01em] text-zinc-950">Administrator sign-in</h1>
+      <h1 className="season-display font-serif text-[26px] leading-tight font-medium tracking-[-0.01em] text-zinc-950">Administrator sign-in</h1>
       <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-600">
         The administrator password is separate from the chapter password and from every member password.
       </p>

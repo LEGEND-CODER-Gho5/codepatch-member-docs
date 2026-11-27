@@ -243,7 +243,7 @@ export function PreferencesDialog({ open, onClose }: { open: boolean; onClose: (
               off="off"
               icon={Sparkles}
               title="Seasonal decorations"
-              description="Holiday banners and artwork, like the Thanksgiving and winter garlands."
+              description="During the holidays: the banners and garlands, plus holiday headline fonts, colors, and icons."
             />
           </div>
         </Section>

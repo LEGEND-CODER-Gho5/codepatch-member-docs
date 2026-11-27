@@ -31,7 +31,7 @@ export function SeasonalBanner({ season, message }: { season: Season; message: s
     >
       <div className="flex flex-col-reverse sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1 px-5 pt-1 pb-5 sm:py-5">
-          <p className="font-serif text-[24px] leading-tight font-medium tracking-[-0.01em] text-zinc-950">{season.title}</p>
+          <p className="season-display font-serif text-[24px] leading-tight font-medium tracking-[-0.01em] text-zinc-950">{season.title}</p>
           <p className="mt-1.5 max-w-xl text-[14px] leading-relaxed text-zinc-600">{message}</p>
         </div>
         <SeasonGarland

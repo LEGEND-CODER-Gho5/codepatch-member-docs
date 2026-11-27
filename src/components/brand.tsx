@@ -1,5 +1,7 @@
+import { SeasonSticker } from "@/components/season/season-icons";
 import { cn } from "@/lib/cn";
 
+/** The stitched "CP" patch; during a holiday it wears a small leaf or snowflake (SeasonSticker). */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <span
@@ -9,8 +11,9 @@ export function BrandMark({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="absolute inset-[3px] rounded-[3px] border border-dashed border-white/30" />
+      <span className="brand-stitch absolute inset-[3px] rounded-[3px] border border-dashed border-white/30" />
       CP
+      <SeasonSticker />
     </span>
   );
 }
