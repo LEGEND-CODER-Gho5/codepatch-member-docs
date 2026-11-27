@@ -1,0 +1,47 @@
+{
+  "name": "codepatch-member-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Code Patch STEM (SBHS Chapter) member documentation management system",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "setup": "node scripts/setup.mjs",
+    "credentials:reset": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/reset-credential.mjs",
+    "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs migrate",
+    "db:status": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs status",
+    "db:print-sql": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db.mjs print-sql",
+    "test:security": "node scripts/security-check.mjs",
+    "test:audit": "node --no-warnings scripts/test-audit-immutability.mjs",
+    "test:db-config": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-database-config.mjs",
+    "test:migrations": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-migrations.mjs",
+    "test:target-safety": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-target-safety.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.6.0",
+    "@vercel/functions": "^3.11.3",
+    "clsx": "^2.1.1",
+    "diff": "^9.0.0",
+    "lucide-react": "^1.79.0",
+    "next": "16.4.6",
+    "pg": "^8.23.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.7.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5"
+  }
+}
