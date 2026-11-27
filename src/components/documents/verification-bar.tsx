@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { unverifyDocumentAction, verifyDocumentAction } from "@/actions/documents";
 import { Button } from "@/components/ui/button";
+import { Seal } from "@/components/ui/seal";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
@@ -57,7 +58,7 @@ export function VerificationBar({
     >
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
         {verification ? (
-          <BadgeCheck className="mt-0.5 size-[18px] shrink-0 text-emerald-600" aria-hidden />
+          <Seal size={22} className="mt-px" />
         ) : (
           <CircleDashed className="mt-0.5 size-[18px] shrink-0 text-zinc-400" aria-hidden />
         )}

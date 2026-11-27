@@ -23,7 +23,7 @@ export default async function SiteLoginPage({ searchParams }: { searchParams: Pr
     <AuthShell org={org} step={1}>
       {viewer.configured ? (
         <>
-          <h1 className="text-[20px] font-semibold tracking-[-0.01em] text-zinc-950">Chapter access</h1>
+          <h1 className="font-serif text-[26px] leading-tight font-medium tracking-[-0.01em] text-zinc-950">Chapter access</h1>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-zinc-600">
             Enter the shared chapter password to open the member directory.
           </p>

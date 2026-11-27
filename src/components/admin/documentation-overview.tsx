@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowRight, BadgeCheck, Clock, FileText, Search, UserRound } from "lucide-react";
+import { ArrowRight, Clock, FileText, Search, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Select } from "@/components/ui/field";
 import { useActionMenu } from "@/components/ui/gestures";
+import { Seal } from "@/components/ui/seal";
 import { Badge, EmptyState, StatusBadge, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDateShort, formatHours } from "@/lib/format";
@@ -31,12 +32,21 @@ export type DocumentationRow = {
   verifiedHours: number;
 };
 
-export function DocumentationOverview({ rows, departments }: { rows: DocumentationRow[]; departments: DepartmentOption[] }) {
+export function DocumentationOverview({
+  rows,
+  departments,
+  initialVerification = "",
+}: {
+  rows: DocumentationRow[];
+  departments: DepartmentOption[];
+  /** "needed" opens the list filtered to records that need verifying (Overview → Review records). */
+  initialVerification?: "" | "needed";
+}) {
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("");
   const [type, setType] = useState<"" | "member_documentation" | "volunteer_hours_record">("");
   const [status, setStatus] = useState<"" | MemberStatus>("active");
-  const [verification, setVerification] = useState<"" | "needed">("");
+  const [verification, setVerification] = useState<"" | "needed">(initialVerification);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -183,10 +193,10 @@ function DocCell({
             <Badge tone="warning">{toVerify} to verify</Badge>
           ) : (
             hasEntries && (
-              <Badge tone="success">
-                <BadgeCheck className="size-3" aria-hidden />
+              <span className="flex items-center gap-1 text-[11.5px] font-medium text-emerald-700">
+                <Seal size={14} />
                 Verified
-              </Badge>
+              </span>
             )
           )}
         </span>

@@ -23,7 +23,7 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
       <aside className="theme-fixed hidden flex-col justify-between border-r border-black/40 bg-charcoal-950 px-12 py-10 lg:flex">
         <Wordmark organizationName={org.organizationName} subtitle={org.chapterName} tone="light" />
         <div className="max-w-[360px]">
-          <p className="text-[11.5px] font-semibold tracking-[0.12em] text-brand-300 uppercase">Member Documentation System</p>
+          <p className="text-[13px] font-medium text-brand-300">Member Documentation System</p>
           <p className="mt-3 text-[22px] leading-snug font-medium text-white">
             Contributions and volunteer hours for {org.organizationName}, {org.chapterName}.
           </p>

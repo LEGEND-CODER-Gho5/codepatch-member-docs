@@ -121,13 +121,13 @@ export function DiffView({ previous, next, periodLabel = "Period" }: { previous:
       <table className="w-full min-w-[640px] border-collapse text-[13px]">
         <thead>
           <tr>
-            <th className="w-[190px] border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[11.5px] font-semibold tracking-[0.02em] text-zinc-500 uppercase">
+            <th className="w-[190px] border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[12px] font-medium text-zinc-500">
               Field
             </th>
-            <th className="border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[11.5px] font-semibold tracking-[0.02em] text-zinc-500 uppercase">
+            <th className="border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[12px] font-medium text-zinc-500">
               Previous version
             </th>
-            <th className="border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[11.5px] font-semibold tracking-[0.02em] text-zinc-500 uppercase">
+            <th className="border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-left text-[12px] font-medium text-zinc-500">
               New version
             </th>
           </tr>

@@ -1,6 +1,7 @@
-import { ArrowRight, BadgeCheck, FileText, Printer, Save, ShieldCheck } from "lucide-react";
+import { ArrowRight, FileText, Printer, Save, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ActorBadge, Badge, EmptyState, Panel } from "@/components/ui/primitives";
+import { ActorBadge, EmptyState, Panel } from "@/components/ui/primitives";
+import { Seal } from "@/components/ui/seal";
 import { actionLabel } from "@/lib/audit-display";
 import { cn } from "@/lib/cn";
 import { DOCUMENT_TYPE_LABEL, PERIOD_LABEL } from "@/lib/document-text";
@@ -160,10 +161,10 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
                           {summary.period || "Period not set"}
                         </p>
                         {summary.verification ? (
-                          <Badge tone="success" className="shrink-0">
-                            <BadgeCheck className="size-3" aria-hidden />
+                          <span className="flex shrink-0 items-center gap-1 text-[11.5px] font-medium text-emerald-700">
+                            <Seal size={14} />
                             Verified
-                          </Badge>
+                          </span>
                         ) : (
                           <span className="shrink-0 text-[11.5px] text-zinc-400">Not verified</span>
                         )}

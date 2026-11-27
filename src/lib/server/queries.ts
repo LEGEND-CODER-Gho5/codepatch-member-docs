@@ -965,3 +965,9 @@ export async function getMonthlyHours(months = 12): Promise<MonthlyHours[]> {
   }
   return result;
 }
+
+/** All volunteer hours the chapter has logged (a single total, shown in the directory). */
+export async function getChapterHoursTotal(): Promise<number> {
+  const row = await sqlOne<{ total: number }>("SELECT coalesce(sum(hours), 0) AS total FROM volunteer_hours");
+  return Number(row?.total ?? 0);
+}

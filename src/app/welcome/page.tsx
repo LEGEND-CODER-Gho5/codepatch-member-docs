@@ -46,7 +46,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="text-[13px] font-medium text-brand-700">
           {org.organizationName}, {org.chapterName}
         </p>
-        <h1 data-large-title="Welcome" className="mt-1.5 text-[28px] leading-tight font-semibold tracking-[-0.015em] text-zinc-950">
+        <h1 data-large-title="Welcome" className="mt-1.5 font-serif text-[32px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950">
           Welcome to the member portal
         </h1>
         <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-zinc-600">

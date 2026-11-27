@@ -93,7 +93,7 @@ function SidebarContent({ org, adminName, unread, onNavigate }: { org: OrgInfo; 
         </Link>
       </div>
       <div className="flex-1 overflow-y-auto px-3">
-        <p className="mb-2 px-2.5 text-[10.5px] font-semibold tracking-[0.12em] text-zinc-600 uppercase">Manage</p>
+        <p className="mb-2 px-2.5 text-[12px] font-medium text-zinc-500">Manage</p>
         <Navigation unread={unread} onNavigate={onNavigate} />
       </div>
       <div className="space-y-3 border-t border-white/[0.06] px-5 py-4">

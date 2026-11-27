@@ -25,9 +25,10 @@ import { CONTRIBUTION_GUIDANCE, PDF_TEXT } from "@/lib/document-text";
 import { copyRichText, downloadFile, NEW_GOOGLE_DOC_URL } from "@/lib/export/browser";
 import { renderDocumentHtml } from "@/lib/export/document-html";
 import { buildExportModel, exportFileName } from "@/lib/export/document-model";
-import { formatHours, formatPlainDate, formatTime, todayInAppTimeZone } from "@/lib/format";
+import { formatDateShort, formatHours, formatPlainDate, formatTime, todayInAppTimeZone } from "@/lib/format";
 import { cleanHours, LIMITS } from "@/lib/validation";
 import { VERIFIER_FIELDS, type ActingAs, type DocumentRecord, type EntryKind, type HeaderField, type OrgInfo, type WorkspaceMember } from "@/lib/types";
+import { VerifiedStamp } from "@/components/ui/seal";
 import { VerificationBar } from "./verification-bar";
 
 type RowValues = Record<string, string>;
@@ -446,7 +447,10 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
       />
 
       {/* ----------------------------- Interactive sheet ----------------------------- */}
-      <article className="rounded-md border border-zinc-200 bg-surface px-5 py-8 shadow-sheet sm:px-12 sm:py-12 print:hidden">
+      <article className="relative rounded-md border border-zinc-200 bg-surface px-5 py-8 shadow-sheet sm:px-12 sm:py-12 print:hidden">
+        {record.verification && (
+          <VerifiedStamp date={formatDateShort(record.verification.at)} className="absolute top-7 right-7 hidden sm:flex" />
+        )}
         {kind === "contribution" ? (
           <>
             <header>
@@ -598,7 +602,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
 
             <section className="mt-8" aria-label="Volunteer Hours">
               <h3 className="mb-3 text-[16px] font-normal text-zinc-500">{PDF_TEXT.volunteerHours.sectionTitle}</h3>
-              <div className="overflow-x-auto rounded-md border border-zinc-300">
+              <div className="relative overflow-x-auto rounded-md border border-zinc-300">
                 <table className="w-full min-w-[560px] border-collapse text-[13.5px]">
                   <thead>
                     <tr className="bg-zinc-50">

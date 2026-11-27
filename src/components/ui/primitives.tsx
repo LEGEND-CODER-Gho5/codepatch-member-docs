@@ -85,6 +85,7 @@ export function PageHeader({
   eyebrow,
   actions,
   compactTitle,
+  display = false,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -92,6 +93,8 @@ export function PageHeader({
   actions?: ReactNode;
   /** Plain text the top bar shows once the title scrolls away (defaults to the title when it is text). */
   compactTitle?: string;
+  /** The serif headline of a home page (Overview), in the typeface of the chapter's official forms. */
+  display?: boolean;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
@@ -100,11 +103,15 @@ export function PageHeader({
         {/* Large on phones, like an iPhone app's title; it moves into the top bar as you scroll (CompactTitle). */}
         <h1
           data-large-title={compactTitle ?? (typeof title === "string" ? title : undefined)}
-          className="text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[21px] sm:font-semibold sm:tracking-[-0.01em]"
+          className={
+            display
+              ? "font-serif text-[30px] leading-[1.15] font-medium tracking-[-0.01em] text-zinc-950 sm:text-[34px]"
+              : "text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[21px] sm:font-semibold sm:tracking-[-0.01em]"
+          }
         >
           {title}
         </h1>
-        {description && <p className="mt-1 max-w-2xl text-[13.5px] text-zinc-600">{description}</p>}
+        {description && <p className={display ? "mt-2.5 max-w-2xl text-[15px] leading-relaxed text-zinc-600" : "mt-1 max-w-2xl text-[13.5px] text-zinc-600"}>{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -174,9 +181,9 @@ export function KeyValue({ label, children }: { label: string; children: ReactNo
 }
 
 export const tableStyles = {
-  wrapper: "overflow-x-auto",
+  wrapper: "relative overflow-x-auto",
   table: "w-full border-collapse text-left text-[13px]",
-  th: "border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-[11.5px] font-semibold tracking-[0.02em] whitespace-nowrap text-zinc-500 uppercase",
+  th: "border-b border-zinc-200 bg-zinc-50/80 px-4 py-2 text-[12px] font-medium whitespace-nowrap text-zinc-500",
   td: "border-b border-zinc-100 px-4 py-2.5 align-middle",
   row: "transition-colors hover:bg-zinc-50/80",
 };

@@ -1,10 +1,9 @@
-import { CircleAlert, FileClock } from "lucide-react";
+import { BadgeCheck, CircleAlert, FileClock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActivityList } from "@/components/admin/activity-list";
 import { HoursChart } from "@/components/admin/hours-chart";
 import { CountUp } from "@/components/ui/count-up";
-import { AddMemberTrigger } from "@/components/admin/admin-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader, Panel, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
@@ -30,6 +29,15 @@ export default async function AdminOverviewPage() {
   ]);
   // Only once the first backup has run (or failed): a brand-new setup is not a problem yet.
   const backupWarning = backupsConfigured && backupStatus !== null && isBackupStale(backupStatus);
+
+  // One plain sentence on where the chapter stands, under the greeting.
+  const summary =
+    stats.totalHours === 0
+      ? "No volunteer hours have been logged yet. They appear here as members fill in their records."
+      : `Members have logged ${formatHours(stats.totalHours)} volunteer hours, ${formatHours(stats.verifiedHours)} of them verified. ` +
+        (stats.recordsToVerify > 0
+          ? `${formatCount(stats.recordsToVerify)} record${stats.recordsToVerify === 1 ? " is" : "s are"} waiting for your verification.`
+          : "Every record with entries is verified.");
 
   const largest = [...departments].sort((a, b) => b.activeMembers - a.activeMembers)[0];
   const tiles = [
@@ -68,17 +76,24 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
+      <p className="mb-1.5 text-[13px] text-zinc-500">{formatWeekdayDate()}</p>
       <PageHeader
+        display
         title={`${greeting()}, ${org.adminDisplayName}`}
         compactTitle="Overview"
-        description={`${formatWeekdayDate()}. Everything on this page updates as members save their work.`}
+        description={summary}
         actions={
           <>
             <ButtonLink href="/admin/history">
               <FileClock />
               Edit history
             </ButtonLink>
-            <AddMemberTrigger />
+            {stats.recordsToVerify > 0 && (
+              <ButtonLink href="/admin/documentation?verify=needed" variant="primary">
+                <BadgeCheck />
+                Review {stats.recordsToVerify} record{stats.recordsToVerify === 1 ? "" : "s"}
+              </ButtonLink>
+            )}
           </>
         }
       />

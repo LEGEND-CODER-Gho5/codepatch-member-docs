@@ -52,14 +52,16 @@ export default async function DocumentationPage({ searchParams }: { searchParams
           </Link>
         ))}
       </nav>
-      {view === "members" ? <MembersView departments={departmentOptions} /> : <EntriesView query={query} departments={departmentOptions} />}
+      {view === "members" ? (
+        <MembersView departments={departmentOptions} needsVerification={text(query.verify) === "needed"} />
+      ) : <EntriesView query={query} departments={departmentOptions} />}
     </>
   );
 }
 
-async function MembersView({ departments }: { departments: { id: string; name: string }[] }) {
+async function MembersView({ departments, needsVerification }: { departments: { id: string; name: string }[]; needsVerification: boolean }) {
   const rows = await getDocumentationOverview();
-  return <DocumentationOverview rows={rows} departments={departments} />;
+  return <DocumentationOverview rows={rows} departments={departments} initialVerification={needsVerification ? "needed" : ""} />;
 }
 
 async function EntriesView({
