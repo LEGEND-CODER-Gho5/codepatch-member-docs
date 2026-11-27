@@ -526,7 +526,7 @@ export async function queryAuditLogs(filters: AuditFilters) {
   } else if (filters.document === "member_account") {
     where.push(`entity_type = 'member'`);
   } else if (filters.document === "administration") {
-    where.push(`entity_type IN ('settings', 'department', 'position', 'security')`);
+    where.push(`entity_type IN ('settings', 'department', 'position', 'security', 'attendance')`);
   }
   const from = filters.from ? startOfDayInAppTimeZone(filters.from) : null;
   if (from) add((p) => `last_occurred_at >= ${p}::timestamptz`, from.toISOString());
@@ -777,4 +777,65 @@ export async function listAllEntries(filters: { kind?: string; member?: string; 
       updatedAt: iso(row.updated_at),
     }),
   );
+}
+
+/* -------------------------------- Attendance ------------------------------- */
+
+export type MeetingAttendee = {
+  memberId: string;
+  fullName: string;
+  departmentName: string;
+  /** Hours credited: the meeting's hours minus any hours subtracted. */
+  hours: number;
+  /** False when the entry it added was later deleted from the member's record. */
+  inRecord: boolean;
+};
+
+export type MeetingRow = {
+  id: string;
+  name: string;
+  date: string;
+  hours: number;
+  recordedBy: string;
+  createdAt: string;
+  attendees: MeetingAttendee[];
+};
+
+export async function listMeetings(limit = 40): Promise<MeetingRow[]> {
+  const meetings = await sql<{ id: string; name: string; meeting_date: string; hours: number; recorded_by_name: string; created_at: Date }>(
+    `SELECT id, name, meeting_date::text AS meeting_date, hours, recorded_by_name, created_at
+       FROM meetings ORDER BY meeting_date DESC, created_at DESC LIMIT $1`,
+    [Math.min(Math.max(limit, 1), 200)],
+  );
+  if (meetings.length === 0) return [];
+  const rows = await sql<{ meeting_id: string; member_id: string; full_name: string; department_name: string; hours: number; volunteer_hours_id: string | null }>(
+    `SELECT a.meeting_id, a.member_id, m.full_name, d.name AS department_name, a.hours, a.volunteer_hours_id
+       FROM meeting_attendance a
+       JOIN members m ON m.id = a.member_id
+       JOIN departments d ON d.id = m.department_id
+      WHERE a.meeting_id IN (SELECT id FROM meetings ORDER BY meeting_date DESC, created_at DESC LIMIT $1)
+      ORDER BY lower(m.full_name)`,
+    [Math.min(Math.max(limit, 1), 200)],
+  );
+  const byMeeting = new Map<string, MeetingAttendee[]>();
+  for (const row of rows) {
+    const list = byMeeting.get(row.meeting_id) ?? [];
+    list.push({
+      memberId: row.member_id,
+      fullName: row.full_name,
+      departmentName: row.department_name,
+      hours: Number(row.hours),
+      inRecord: row.volunteer_hours_id !== null || Number(row.hours) === 0,
+    });
+    byMeeting.set(row.meeting_id, list);
+  }
+  return meetings.map((meeting) => ({
+    id: meeting.id,
+    name: meeting.name,
+    date: meeting.meeting_date,
+    hours: Number(meeting.hours),
+    recordedBy: meeting.recorded_by_name,
+    createdAt: iso(meeting.created_at),
+    attendees: byMeeting.get(meeting.id) ?? [],
+  }));
 }

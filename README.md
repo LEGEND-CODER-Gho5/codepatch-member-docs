@@ -45,6 +45,7 @@ All three are verified on the server, stored only as scrypt hashes, and versione
 ## Features
 
 - **Member directory** — department columns with live member and department counts (from the database), search, and real-time updates when members are added, moved, edited, deactivated, or deleted. A member can belong to several departments: one main department plus any number of other departments, and appears in each of those columns.
+- **Attendance** — Admin → Attendance: enter a meeting's name, date, and hours, tick who attended (with an optional number of hours to subtract per member), and submit. Each present member gets a row in their Volunteer Hours Record. Past meetings can be reopened to change one member's hours or deleted, which removes the hours they added; every change is in Edit History.
 - **Departments and totals** — department member counts include members for whom it is an other department. Volunteer-hour totals per department, Edit History, and notifications use each member's main department, so no hour is counted twice.
 - **Documentation workspace** — both PDF formats as interactive documents with autosave (debounced, per-field), explicit Save, print layouts that mirror the paper forms, multiple records per period, dated contribution entries, an expandable hours table, and an automatically calculated **Total Volunteer Hours**. Member Name, Chapter, Position/Role, and Organization fill in automatically from the member profile.
 - **Download PDF and Copy to Google Docs** — next to Save and Print. Download PDF builds a US Letter PDF of the record in the browser, in the same layout as the printed form, using the bundled IBM Plex fonts in `public/fonts` (SIL Open Font License). Copy to Google Docs copies the record as formatted text and opens a new Google Doc ([docs.new](https://docs.new)) to paste into; no Google sign-in or setup is needed. Both export exactly what is on screen and nothing is sent to a server.
@@ -79,6 +80,7 @@ Defined in [`src/lib/server/migrations.ts`](src/lib/server/migrations.ts) (`npm 
 | `departments`, `positions` | Admin-managed options (unique names, display order) |
 | `members` | Member records (`member_number` for the `CPS-####` ID, main department, position, email, status, start date) |
 | `member_departments` | Other departments a member also belongs to (never the main one) |
+| `meetings`, `meeting_attendance` | Attendance taken by the administrator: who attended, hours credited, and the volunteer-hours entry it added |
 | `member_credentials` | Member password hash, version, last sign-in |
 | `member_documentation` | Both document types: period, verification fields, submission dates |
 | `contribution_entries` | Dated contribution entries of a Member Documentation |
@@ -204,7 +206,7 @@ with app_names(name) as (
     ('application_settings'), ('departments'), ('positions'), ('members'), ('member_credentials'),
     ('member_documentation'), ('contribution_entries'), ('volunteer_hours'), ('audit_logs'),
     ('notifications'), ('sessions'), ('login_attempts'), ('realtime_events'), ('schema_migrations'),
-    ('member_departments'),
+    ('member_departments'), ('meetings'), ('meeting_attendance'),
     ('member_number_seq'), ('audit_logs_id_seq'), ('notifications_id_seq'), ('login_attempts_id_seq'),
     ('realtime_events_id_seq'),
     ('departments_name_unique'), ('positions_name_unique'), ('members_department_idx'), ('members_status_idx'),
@@ -214,11 +216,12 @@ with app_names(name) as (
     ('notifications_recent_idx'), ('notifications_unread_idx'), ('notifications_audit_idx'),
     ('sessions_member_idx'), ('sessions_expires_idx'), ('login_attempts_key_idx'), ('login_attempts_ip_idx'),
     ('realtime_events_created_idx'), ('member_departments_department_idx'),
+    ('meetings_date_idx'), ('meeting_attendance_member_idx'), ('meeting_attendance_entry_idx'),
     ('application_settings_pkey'), ('departments_pkey'), ('positions_pkey'), ('members_pkey'),
     ('members_member_number_key'), ('member_credentials_pkey'), ('member_documentation_pkey'),
     ('contribution_entries_pkey'), ('volunteer_hours_pkey'), ('audit_logs_pkey'), ('notifications_pkey'),
     ('sessions_pkey'), ('sessions_token_hash_key'), ('login_attempts_pkey'), ('realtime_events_pkey'),
-    ('schema_migrations_pkey'), ('member_departments_pkey')
+    ('schema_migrations_pkey'), ('member_departments_pkey'), ('meetings_pkey'), ('meeting_attendance_pkey')
 ),
 taken as (
   select c.relname::text as name,
@@ -256,7 +259,7 @@ union all
 select 6, 'Name already used in schema public: ' || name, kind, 'STOP'
 from taken
 union all
-select 6, 'Names for 15 tables, 5 sequences, 39 indexes', 'all free', 'OK'
+select 6, 'Names for 17 tables, 5 sequences, 44 indexes', 'all free', 'OK'
 where not exists (select 1 from taken)
 union all
 select 7, 'Type name already used in schema public: ' || t.typname, 'type', 'STOP'
@@ -280,12 +283,13 @@ select 10, 'Tables already in schema public (left untouched)',
 order by step, item;
 ```
 
-Step 6 covers all 59 names the migrations create in `public`: 15 tables, 5 sequences, and 39 indexes, including the implicit
+Step 6 covers all 66 names the migrations create in `public`: 17 tables, 5 sequences, and 44 indexes, including the implicit
 primary-key and unique-constraint indexes. Most clashes would only make the migration fail and roll back, but PostgreSQL silently
 renames an automatically created sequence or index whose name is taken, and `CREATE TABLE IF NOT EXISTS` would silently reuse an
 existing `schema_migrations` table, so every clash is a STOP. Step 7 catches a standalone type (such as an enum) with one of those
 names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names; migration 4 adds the
-`member_departments` table and its two indexes (included above).
+`member_departments` table and its two indexes, migration 5 only adds columns, and migration 6 adds the `meetings` and
+`meeting_attendance` tables and their indexes (all included above).
 
 1. **Connection strings.** In the Supabase dashboard, open **Connect** and copy two Supavisor pooler URIs: the **session pooler**
    (port `5432`, for running migrations) and the **transaction pooler** (port `6543`, for the deployed app). The user name has the
@@ -311,7 +315,7 @@ names, and step 8 the audit trigger function. Migration 3 replaces that function
    `db:status` prints the Target line (host, port, database, Supabase project ref, TLS mode) and `DATABASE_URL from:` (it must
    name your env file). Check both before migrating; `db:migrate` runs only when `--confirm-target` matches that project ref.
 
-5. In **Table Editor**, confirm the 15 tables exist and are empty (`schema_migrations` has one row per migration). The first app
+5. In **Table Editor**, confirm the 17 tables exist and are empty (`schema_migrations` has one row per migration). The first app
    start then creates the settings row from `INITIAL_*` and seeds departments and positions. No members are ever seeded.
 
 If verification fails, the error explains the cause (missing CA certificate, host-name mismatch, IPv6-only host, wrong password,

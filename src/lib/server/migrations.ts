@@ -39,6 +39,8 @@ export const APP_TABLES = [
 /** Tables added after migration 1. Each migration that adds one also revokes Supabase's API roles itself. */
 export const LATER_APP_TABLES = [
   "member_departments", // migration 4
+  "meetings", // migration 6
+  "meeting_attendance", // migration 6
 ] as const;
 
 /** Every table this application creates, across all migrations. */
@@ -464,6 +466,53 @@ ALTER TABLE application_settings
   ADD COLUMN site_rules_version integer NOT NULL DEFAULT 1,
   ADD COLUMN site_rules_updated_at timestamptz;
 ALTER TABLE sessions ADD COLUMN rules_accepted_version integer;
+`,
+  },
+  {
+    version: 6,
+    name: "meeting_attendance",
+    sql: /* sql */ `
+-- Attendance taken by the administrator. Submitting a meeting adds one row to
+-- each present member's Volunteer Hours Record (volunteer_hours), so totals,
+-- PDFs, and Edit History work as for any other entry. meeting_attendance keeps
+-- who attended, the hours credited (the meeting's hours minus any deduction),
+-- and the entry it created. Deleting a member removes their attendance;
+-- deleting an entry by hand only unlinks it.
+CREATE TABLE meetings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 120),
+  meeting_date date NOT NULL,
+  hours numeric(7, 2) NOT NULL CHECK (hours > 0 AND hours <= 24),
+  recorded_by_name text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX meetings_date_idx ON meetings (meeting_date DESC, created_at DESC);
+
+CREATE TABLE meeting_attendance (
+  meeting_id uuid NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+  member_id uuid NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  hours numeric(7, 2) NOT NULL CHECK (hours >= 0 AND hours <= 24),
+  volunteer_hours_id uuid REFERENCES volunteer_hours(id) ON DELETE SET NULL,
+  PRIMARY KEY (meeting_id, member_id)
+);
+CREATE INDEX meeting_attendance_member_idx ON meeting_attendance (member_id);
+CREATE INDEX meeting_attendance_entry_idx ON meeting_attendance (volunteer_hours_id);
+
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meeting_attendance ENABLE ROW LEVEL SECURITY;
+
+-- As in migration 2: Supabase's Data API roles get no access to the new tables.
+DO $$
+DECLARE
+  api_role text;
+BEGIN
+  FOREACH api_role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = api_role) THEN
+      EXECUTE format('REVOKE ALL ON TABLE meetings, meeting_attendance FROM %I', api_role);
+    END IF;
+  END LOOP;
+END;
+$$;
 `,
   },
 ];

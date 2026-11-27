@@ -39,6 +39,7 @@ export const ENTITY_LABELS: Record<string, string> = {
   position: "Position",
   settings: "Settings",
   security: "Security",
+  attendance: "Attendance",
 };
 
 const DOCUMENT_LABELS: Record<DocumentType, string> = {

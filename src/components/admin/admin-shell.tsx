@@ -1,6 +1,20 @@
 "use client";
 
-import { Bell, Building, ExternalLink, FileClock, FileText, LayoutDashboard, LogOut, Menu, Settings, UserPlus, Users, X } from "lucide-react";
+import {
+  Bell,
+  Building,
+  ClipboardCheck,
+  ExternalLink,
+  FileClock,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -26,6 +40,7 @@ const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/members", label: "Member Management", icon: Users },
   { href: "/admin/documentation", label: "Documentation", icon: FileText },
+  { href: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/admin/history", label: "Edit History", icon: FileClock },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/departments", label: "Departments", icon: Building },
