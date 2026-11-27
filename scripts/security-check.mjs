@@ -59,9 +59,15 @@ if (crossSite.status !== 403) failures++;
 
 // The nightly backup function answers only Vercel's scheduler: a plain request
 // must never run it (400 = not a schedule dispatch; 404 = not publicly routed).
+// A POST to a path with no public route gets the site's Not Found page, which
+// Next.js answers with 200 for POST because the root layout reads a cookie; the
+// matched path shows the request never reached the function.
 const scheduled = await fetch(`${base}/api/scheduled-backup`, { method: "POST", redirect: "manual" });
-console.log(`${[400, 404, 405].includes(scheduled.status) ? "pass" : "FAIL"}  POST /api/scheduled-backup without a schedule dispatch -> ${scheduled.status}`);
-if (![400, 404, 405].includes(scheduled.status)) failures++;
+const scheduledPath = scheduled.headers.get("x-matched-path");
+const scheduledBlocked = [400, 404, 405].includes(scheduled.status) || scheduledPath === "/_not-found";
+console.log(`${scheduledBlocked ? "pass" : "FAIL"}  POST /api/scheduled-backup without a schedule dispatch -> ${scheduled.status}${scheduledPath ? ` (${scheduledPath})` : ""}`);
+if (!scheduledBlocked) failures++;
+await scheduled.body?.cancel();
 
 const stream = await fetch(`${base}/api/stream`);
 console.log(`${stream.status === 401 ? "pass" : "FAIL"}  /api/stream without a session -> ${stream.status}`);
