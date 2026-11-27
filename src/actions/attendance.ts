@@ -169,7 +169,10 @@ export async function setAttendeeHoursAction(input: { meetingId: string; memberI
 
     await withTransaction(async (tx) => {
       const [row] = await tx.query<{ name: string; meeting_date: string; meeting_hours: number; hours: number; volunteer_hours_id: string | null }>(
-        `SELECT m.name, m.meeting_date::text AS meeting_date, m.hours AS meeting_hours, a.hours, a.volunteer_hours_id
+        // Live meetings have no fixed hours: the limit is how long the meeting ran (24 while it is still running).
+        `SELECT m.name, m.meeting_date::text AS meeting_date,
+                COALESCE(m.hours, LEAST(24, round((extract(epoch FROM (m.ended_at - m.started_at)) / 3600)::numeric, 2)), 24) AS meeting_hours,
+                a.hours, a.volunteer_hours_id
            FROM meeting_attendance a JOIN meetings m ON m.id = a.meeting_id
           WHERE a.meeting_id = $1 AND a.member_id = $2 FOR UPDATE OF a`,
         [input.meetingId, input.memberId],
@@ -285,5 +288,180 @@ export async function deleteMeetingAction(meetingId: string): Promise<ActionResu
     return { ok: true, data: null };
   } catch (error) {
     return handleActionError(error, "deleteMeeting");
+  }
+}
+
+/* ------------------------------- Live attendance -------------------------------- */
+// Times always come from the database clock (now()), never from the browser.
+
+/** Hours between two times, rounded to the nearest minute, at most 24. */
+function hoursBetween(from: Date | string, to: Date | string): number {
+  const minutes = Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60_000));
+  return Math.min(MAX_MEETING_HOURS, Math.round((minutes / 60) * 100) / 100);
+}
+
+async function liveMeeting(tx: Queryable, meetingId: string) {
+  const [meeting] = await tx.query<{ id: string; name: string; meeting_date: string; started_at: Date }>(
+    "SELECT id, name, meeting_date::text AS meeting_date, started_at FROM meetings WHERE id = $1 AND status = 'in_progress' FOR UPDATE",
+    [meetingId],
+  );
+  if (!meeting) throw new ActionError("This meeting has already ended. Reload the page.", "conflict");
+  return meeting;
+}
+
+/** Checks one member out now and adds their time to their record. Returns the hours credited, or null if they weren't checked in. */
+async function checkOut(tx: Queryable, actor: Actor, meeting: { id: string; name: string; meeting_date: string }, memberId: string) {
+  const [row] = await tx.query<{ checked_in_at: Date; left_at: Date }>(
+    `UPDATE meeting_attendance SET left_at = now()
+      WHERE meeting_id = $1 AND member_id = $2 AND left_at IS NULL
+      RETURNING checked_in_at, left_at`,
+    [meeting.id, memberId],
+  );
+  if (!row) return null;
+  const hours = hoursBetween(row.checked_in_at, row.left_at);
+  const entryId = hours > 0 ? await addMeetingEntry(tx, actor, memberId, { name: meeting.name, date: meeting.meeting_date }, hours) : null;
+  await tx.query("UPDATE meeting_attendance SET hours = $3, volunteer_hours_id = $4 WHERE meeting_id = $1 AND member_id = $2", [
+    meeting.id,
+    memberId,
+    hours,
+    entryId,
+  ]);
+  return hours;
+}
+
+export async function startMeetingAction(input: { name: string }): Promise<ActionResult<{ meetingId: string }>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    const name = cleanLine(input?.name, 120, "Meeting name", true);
+    if (!name.ok) return fail(name.error, "invalid");
+    const meetingId = await withTransaction(async (tx) => {
+      const [running] = await tx.query<{ name: string }>("SELECT name FROM meetings WHERE status = 'in_progress'");
+      if (running) throw new ActionError(`"${running.name}" is still in progress. End it before starting another meeting.`, "conflict");
+      const [meeting] = await tx.query<{ id: string }>(
+        `INSERT INTO meetings (name, meeting_date, status, started_at, recorded_by_name)
+         VALUES ($1, (now() AT TIME ZONE 'America/New_York')::date, 'in_progress', now(), $2) RETURNING id`,
+        [name.value, actor.name],
+      );
+      await recordAudit(tx, {
+        actor,
+        action: "created",
+        entityType: "attendance",
+        recordId: meeting.id,
+        summary: `Started meeting ${name.value}`,
+        next: { name: name.value },
+        realtime: ["admin"],
+      });
+      return meeting.id;
+    });
+    return { ok: true, data: { meetingId } };
+  } catch (error) {
+    return handleActionError(error, "startMeeting");
+  }
+}
+
+export async function checkInAction(input: { meetingId: string; memberId: string }): Promise<ActionResult<null>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    if (!isUuid(input?.meetingId) || !isUuid(input?.memberId)) return fail("Invalid request.", "invalid");
+    await withTransaction(async (tx) => {
+      await liveMeeting(tx, input.meetingId);
+      const [member] = await tx.query<{ status: string }>("SELECT status FROM members WHERE id = $1", [input.memberId]);
+      if (!member || member.status !== "active") throw new ActionError("This member isn't active. Reload the page.", "conflict");
+      await tx.query(
+        `INSERT INTO meeting_attendance (meeting_id, member_id, checked_in_at) VALUES ($1, $2, now())
+         ON CONFLICT (meeting_id, member_id) DO NOTHING`,
+        [input.meetingId, input.memberId],
+      );
+    });
+    return { ok: true, data: null };
+  } catch (error) {
+    return handleActionError(error, "checkIn");
+  }
+}
+
+/** Removes a check-in made by mistake (only while the member hasn't left). */
+export async function undoCheckInAction(input: { meetingId: string; memberId: string }): Promise<ActionResult<null>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    if (!isUuid(input?.meetingId) || !isUuid(input?.memberId)) return fail("Invalid request.", "invalid");
+    await withTransaction(async (tx) => {
+      await liveMeeting(tx, input.meetingId);
+      await tx.query("DELETE FROM meeting_attendance WHERE meeting_id = $1 AND member_id = $2 AND left_at IS NULL", [
+        input.meetingId,
+        input.memberId,
+      ]);
+    });
+    return { ok: true, data: null };
+  } catch (error) {
+    return handleActionError(error, "undoCheckIn");
+  }
+}
+
+export async function markLeftAction(input: { meetingId: string; memberId: string }): Promise<ActionResult<{ hours: number }>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    if (!isUuid(input?.meetingId) || !isUuid(input?.memberId)) return fail("Invalid request.", "invalid");
+    const hours = await withTransaction(async (tx) => {
+      const meeting = await liveMeeting(tx, input.meetingId);
+      const credited = await checkOut(tx, actor, meeting, input.memberId);
+      if (credited === null) throw new ActionError("This member isn't checked in. Reload the page.", "conflict");
+      return credited;
+    });
+    return { ok: true, data: { hours } };
+  } catch (error) {
+    return handleActionError(error, "markLeft");
+  }
+}
+
+export async function endMeetingAction(meetingId: string): Promise<ActionResult<{ checkedOut: number }>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    if (!isUuid(meetingId)) return fail("Invalid request.", "invalid");
+    const result = await withTransaction(async (tx) => {
+      const meeting = await liveMeeting(tx, meetingId);
+      const stillHere = await tx.query<{ member_id: string }>(
+        "SELECT member_id FROM meeting_attendance WHERE meeting_id = $1 AND left_at IS NULL",
+        [meetingId],
+      );
+      for (const row of stillHere) await checkOut(tx, actor, meeting, row.member_id);
+      const [ended] = await tx.query<{ started_at: Date; ended_at: Date }>(
+        "UPDATE meetings SET status = 'ended', ended_at = now() WHERE id = $1 RETURNING started_at, ended_at",
+        [meetingId],
+      );
+      const attended = await tx.query<{ full_name: string; hours: number | null }>(
+        `SELECT m.full_name, a.hours FROM meeting_attendance a JOIN members m ON m.id = a.member_id
+          WHERE a.meeting_id = $1 ORDER BY lower(m.full_name)`,
+        [meetingId],
+      );
+      await recordAudit(tx, {
+        actor,
+        action: "edited",
+        entityType: "attendance",
+        recordId: meetingId,
+        summary: `Ended meeting ${meeting.name}`,
+        next: {
+          name: meeting.name,
+          meeting_date: meeting.meeting_date,
+          duration_hours: hoursBetween(ended.started_at, ended.ended_at),
+          present: attended.length,
+          members: attended.map((row) => `${row.full_name} (${Number(row.hours ?? 0)} h)`).join(", "),
+        },
+        notification: {
+          type: "attendance.recorded",
+          description: `${actor.name} ended ${meeting.name}: ${attended.length} member${attended.length === 1 ? "" : "s"} attended and their hours were added.`,
+          link: "/admin/attendance",
+        },
+        realtime: ["admin"],
+      });
+      return { checkedOut: stillHere.length };
+    });
+    return { ok: true, data: result };
+  } catch (error) {
+    return handleActionError(error, "endMeeting");
   }
 }

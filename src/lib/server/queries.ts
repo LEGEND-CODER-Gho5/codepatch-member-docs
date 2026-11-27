@@ -785,8 +785,10 @@ export type MeetingAttendee = {
   memberId: string;
   fullName: string;
   departmentName: string;
-  /** Hours credited: the meeting's hours minus any hours subtracted. */
-  hours: number;
+  /** Hours credited (null while still at a live meeting). */
+  hours: number | null;
+  checkedInAt: string | null;
+  leftAt: string | null;
   /** False when the entry it added was later deleted from the member's record. */
   inRecord: boolean;
 };
@@ -795,37 +797,58 @@ export type MeetingRow = {
   id: string;
   name: string;
   date: string;
-  hours: number;
+  /** Fixed hours for meetings entered after the fact; null for live (timed) meetings. */
+  hours: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
   recordedBy: string;
   createdAt: string;
   attendees: MeetingAttendee[];
 };
 
-export async function listMeetings(limit = 40): Promise<MeetingRow[]> {
-  const meetings = await sql<{ id: string; name: string; meeting_date: string; hours: number; recorded_by_name: string; created_at: Date }>(
-    `SELECT id, name, meeting_date::text AS meeting_date, hours, recorded_by_name, created_at
-       FROM meetings ORDER BY meeting_date DESC, created_at DESC LIMIT $1`,
-    [Math.min(Math.max(limit, 1), 200)],
-  );
+type MeetingDbRow = {
+  id: string;
+  name: string;
+  meeting_date: string;
+  hours: number | null;
+  started_at: Date | null;
+  ended_at: Date | null;
+  recorded_by_name: string;
+  created_at: Date;
+};
+
+async function withAttendees(meetings: MeetingDbRow[]): Promise<MeetingRow[]> {
   if (meetings.length === 0) return [];
-  const rows = await sql<{ meeting_id: string; member_id: string; full_name: string; department_name: string; hours: number; volunteer_hours_id: string | null }>(
-    `SELECT a.meeting_id, a.member_id, m.full_name, d.name AS department_name, a.hours, a.volunteer_hours_id
+  const rows = await sql<{
+    meeting_id: string;
+    member_id: string;
+    full_name: string;
+    department_name: string;
+    hours: number | null;
+    checked_in_at: Date | null;
+    left_at: Date | null;
+    volunteer_hours_id: string | null;
+  }>(
+    `SELECT a.meeting_id, a.member_id, m.full_name, d.name AS department_name, a.hours, a.checked_in_at, a.left_at, a.volunteer_hours_id
        FROM meeting_attendance a
        JOIN members m ON m.id = a.member_id
        JOIN departments d ON d.id = m.department_id
-      WHERE a.meeting_id IN (SELECT id FROM meetings ORDER BY meeting_date DESC, created_at DESC LIMIT $1)
-      ORDER BY lower(m.full_name)`,
-    [Math.min(Math.max(limit, 1), 200)],
+      WHERE a.meeting_id IN (${meetings.map((_, index) => `$${index + 1}::uuid`).join(", ")})
+      ORDER BY a.checked_in_at NULLS LAST, lower(m.full_name)`,
+    meetings.map((meeting) => meeting.id),
   );
   const byMeeting = new Map<string, MeetingAttendee[]>();
   for (const row of rows) {
     const list = byMeeting.get(row.meeting_id) ?? [];
+    const hours = row.hours === null ? null : Number(row.hours);
     list.push({
       memberId: row.member_id,
       fullName: row.full_name,
       departmentName: row.department_name,
-      hours: Number(row.hours),
-      inRecord: row.volunteer_hours_id !== null || Number(row.hours) === 0,
+      hours,
+      checkedInAt: isoOrNull(row.checked_in_at),
+      leftAt: isoOrNull(row.left_at),
+      inRecord: row.volunteer_hours_id !== null || !hours,
     });
     byMeeting.set(row.meeting_id, list);
   }
@@ -833,9 +856,30 @@ export async function listMeetings(limit = 40): Promise<MeetingRow[]> {
     id: meeting.id,
     name: meeting.name,
     date: meeting.meeting_date,
-    hours: Number(meeting.hours),
+    hours: meeting.hours === null ? null : Number(meeting.hours),
+    startedAt: isoOrNull(meeting.started_at),
+    endedAt: isoOrNull(meeting.ended_at),
     recordedBy: meeting.recorded_by_name,
     createdAt: iso(meeting.created_at),
     attendees: byMeeting.get(meeting.id) ?? [],
   }));
+}
+
+const MEETING_COLUMNS = "id, name, meeting_date::text AS meeting_date, hours, started_at, ended_at, recorded_by_name, created_at";
+
+/** Finished meetings, newest first. */
+export async function listMeetings(limit = 40): Promise<MeetingRow[]> {
+  const meetings = await sql<MeetingDbRow>(
+    `SELECT ${MEETING_COLUMNS} FROM meetings WHERE status = 'ended'
+      ORDER BY meeting_date DESC, created_at DESC LIMIT $1`,
+    [Math.min(Math.max(limit, 1), 200)],
+  );
+  return withAttendees(meetings);
+}
+
+/** The meeting currently in progress, if any (at most one). */
+export async function getLiveMeeting(): Promise<MeetingRow | null> {
+  const meetings = await sql<MeetingDbRow>(`SELECT ${MEETING_COLUMNS} FROM meetings WHERE status = 'in_progress' LIMIT 1`);
+  const [meeting] = await withAttendees(meetings);
+  return meeting ?? null;
 }

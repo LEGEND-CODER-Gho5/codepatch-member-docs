@@ -45,7 +45,7 @@ All three are verified on the server, stored only as scrypt hashes, and versione
 ## Features
 
 - **Member directory** — department columns with live member and department counts (from the database), search, and real-time updates when members are added, moved, edited, deactivated, or deleted. A member can belong to several departments: one main department plus any number of other departments, and appears in each of those columns.
-- **Attendance** — Admin → Attendance: enter a meeting's name, date, and hours, tick who attended (with an optional number of hours to subtract per member), and submit. Each present member gets a row in their Volunteer Hours Record. Past meetings can be reopened to change one member's hours or deleted, which removes the hours they added; every change is in Edit History.
+- **Attendance** — Admin → Attendance: start a meeting, tick members as they arrive (the server records the time), press **This participant left** for anyone who leaves early, and **End meeting** to check everyone else out; each member's time, rounded to the minute, is added to their Volunteer Hours Record when they leave. Only one meeting runs at a time. For a meeting that wasn't tracked live, **Add a past meeting** takes a name, date, and hours, with an optional number of hours to subtract per member. Each present member gets a row in their Volunteer Hours Record. Past meetings can be reopened to change one member's hours or deleted, which removes the hours they added; every change is in Edit History.
 - **Departments and totals** — department member counts include members for whom it is an other department. Volunteer-hour totals per department, Edit History, and notifications use each member's main department, so no hour is counted twice.
 - **Documentation workspace** — both PDF formats as interactive documents with autosave (debounced, per-field), explicit Save, print layouts that mirror the paper forms, multiple records per period, dated contribution entries, an expandable hours table, and an automatically calculated **Total Volunteer Hours**. Member Name, Chapter, Position/Role, and Organization fill in automatically from the member profile.
 - **Download PDF and Copy to Google Docs** — next to Save and Print. Download PDF builds a US Letter PDF of the record in the browser, in the same layout as the printed form, using the bundled IBM Plex fonts in `public/fonts` (SIL Open Font License). Copy to Google Docs copies the record as formatted text and opens a new Google Doc ([docs.new](https://docs.new)) to paste into; no Google sign-in or setup is needed. Both export exactly what is on screen and nothing is sent to a server.
@@ -216,7 +216,7 @@ with app_names(name) as (
     ('notifications_recent_idx'), ('notifications_unread_idx'), ('notifications_audit_idx'),
     ('sessions_member_idx'), ('sessions_expires_idx'), ('login_attempts_key_idx'), ('login_attempts_ip_idx'),
     ('realtime_events_created_idx'), ('member_departments_department_idx'),
-    ('meetings_date_idx'), ('meeting_attendance_member_idx'), ('meeting_attendance_entry_idx'),
+    ('meetings_date_idx'), ('meetings_one_live_idx'), ('meeting_attendance_member_idx'), ('meeting_attendance_entry_idx'),
     ('application_settings_pkey'), ('departments_pkey'), ('positions_pkey'), ('members_pkey'),
     ('members_member_number_key'), ('member_credentials_pkey'), ('member_documentation_pkey'),
     ('contribution_entries_pkey'), ('volunteer_hours_pkey'), ('audit_logs_pkey'), ('notifications_pkey'),
@@ -259,7 +259,7 @@ union all
 select 6, 'Name already used in schema public: ' || name, kind, 'STOP'
 from taken
 union all
-select 6, 'Names for 17 tables, 5 sequences, 44 indexes', 'all free', 'OK'
+select 6, 'Names for 17 tables, 5 sequences, 45 indexes', 'all free', 'OK'
 where not exists (select 1 from taken)
 union all
 select 7, 'Type name already used in schema public: ' || t.typname, 'type', 'STOP'
@@ -283,13 +283,14 @@ select 10, 'Tables already in schema public (left untouched)',
 order by step, item;
 ```
 
-Step 6 covers all 66 names the migrations create in `public`: 17 tables, 5 sequences, and 44 indexes, including the implicit
+Step 6 covers all 67 names the migrations create in `public`: 17 tables, 5 sequences, and 45 indexes, including the implicit
 primary-key and unique-constraint indexes. Most clashes would only make the migration fail and roll back, but PostgreSQL silently
 renames an automatically created sequence or index whose name is taken, and `CREATE TABLE IF NOT EXISTS` would silently reuse an
 existing `schema_migrations` table, so every clash is a STOP. Step 7 catches a standalone type (such as an enum) with one of those
 names, and step 8 the audit trigger function. Migration 3 replaces that function and creates no new names; migration 4 adds the
 `member_departments` table and its two indexes, migration 5 only adds columns, and migration 6 adds the `meetings` and
-`meeting_attendance` tables and their indexes (all included above).
+`meeting_attendance` tables and their indexes, and migration 7 adds columns and the `meetings_one_live_idx` index (all included
+above).
 
 1. **Connection strings.** In the Supabase dashboard, open **Connect** and copy two Supavisor pooler URIs: the **session pooler**
    (port `5432`, for running migrations) and the **transaction pooler** (port `6543`, for the deployed app). The user name has the

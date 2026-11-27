@@ -515,6 +515,28 @@ END;
 $$;
 `,
   },
+  {
+    version: 7,
+    name: "live_meeting_times",
+    sql: /* sql */ `
+-- Live attendance: a meeting can be in progress. Each member's check-in and
+-- leaving times are recorded by the server, and their hours are the time in
+-- between, added to their record when they leave or the meeting ends. Hours
+-- stay empty until then. Meetings recorded with a fixed number of hours
+-- (migration 6) are kept as ended meetings without times. Only one meeting can
+-- be in progress at a time.
+ALTER TABLE meetings
+  ADD COLUMN status text NOT NULL DEFAULT 'ended' CHECK (status IN ('in_progress', 'ended')),
+  ADD COLUMN started_at timestamptz,
+  ADD COLUMN ended_at timestamptz,
+  ALTER COLUMN hours DROP NOT NULL;
+CREATE UNIQUE INDEX meetings_one_live_idx ON meetings ((true)) WHERE status = 'in_progress';
+ALTER TABLE meeting_attendance
+  ADD COLUMN checked_in_at timestamptz,
+  ADD COLUMN left_at timestamptz,
+  ALTER COLUMN hours DROP NOT NULL;
+`,
+  },
 ];
 
 /* ------------------------------------------------------------------------- */
