@@ -1,13 +1,30 @@
 "use client";
 
-import { Check, CircleExclamationPoint, Info, LoaderCircle, Lock, Plus, Printer, Save, ShieldCheck, Trash } from "lucide-react";
+import {
+  Check,
+  CircleExclamationPoint,
+  Copy,
+  ExternalLink,
+  FileDown,
+  Info,
+  LoaderCircle,
+  Lock,
+  Plus,
+  Printer,
+  Save,
+  ShieldCheck,
+  Trash,
+} from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type TextareaHTMLAttributes } from "react";
 import { createEntryAction, deleteEntryAction, saveDocumentFieldsAction, updateEntryAction } from "@/actions/documents";
-import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/dialog";
+import { Button, buttonStyles } from "@/components/ui/button";
+import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/cn";
 import { CONTRIBUTION_GUIDANCE, PDF_TEXT } from "@/lib/document-text";
+import { copyRichText, downloadFile, NEW_GOOGLE_DOC_URL } from "@/lib/export/browser";
+import { renderDocumentHtml } from "@/lib/export/document-html";
+import { buildExportModel, exportFileName } from "@/lib/export/document-model";
 import { formatHours, formatPlainDate, formatTime, todayInAppTimeZone } from "@/lib/format";
 import { cleanHours, LIMITS } from "@/lib/validation";
 import type { ActingAs, DocumentRecord, EntryKind, HeaderField, OrgInfo, WorkspaceMember } from "@/lib/types";
@@ -342,8 +359,61 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
     />
   );
 
+  /* ------------------------------ Export (PDF, Google Docs) ------------------------------ */
+  const [exporting, setExporting] = useState<"pdf" | "docs" | null>(null);
+  const [docsTabBlocked, setDocsTabBlocked] = useState(false);
+  const exportModel = () =>
+    buildExportModel({ kind, header: headerRef.current, rows: rowsRef.current, member, org, totalHours });
+
+  async function downloadPdf() {
+    if (exporting) return;
+    setExporting("pdf");
+    try {
+      // The PDF shows what is on screen; saving first keeps the stored record identical.
+      void flush();
+      const model = exportModel();
+      const { loadPdfFonts, renderDocumentPdf } = await import("@/lib/export/document-pdf");
+      const bytes = await renderDocumentPdf(model, await loadPdfFonts());
+      downloadFile(bytes, exportFileName(model.fileTitle, "pdf"), "application/pdf");
+      toast("PDF downloaded", { detail: "Check your Downloads folder." });
+    } catch {
+      toast("The PDF could not be created", { kind: "error", detail: "Check your connection and try again." });
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function copyToGoogleDocs() {
+    if (exporting) return;
+    setExporting("docs");
+    void flush();
+    try {
+      const { html, text } = renderDocumentHtml(exportModel());
+      await copyRichText(html, text);
+    } catch {
+      setExporting(null);
+      toast("Copying is blocked in this browser", { kind: "error", detail: "Use Download PDF instead, or try another browser." });
+      return;
+    }
+    setExporting(null);
+    const tab = window.open(NEW_GOOGLE_DOC_URL, "_blank");
+    if (tab) {
+      toast("Copied. Now paste it into the new Google Doc", { detail: "Press Ctrl+V (⌘V on a Mac) in the new tab.", duration: 9000 });
+    } else {
+      setDocsTabBlocked(true);
+    }
+  }
+
   const sharedHeader = (
-    <EditorToolbar state={saveState} onSave={() => void flush()} onRetry={() => void flush()} actingAs={actingAs} />
+    <EditorToolbar
+      state={saveState}
+      onSave={() => void flush()}
+      onRetry={() => void flush()}
+      onPdf={() => void downloadPdf()}
+      onGoogleDocs={() => void copyToGoogleDocs()}
+      exporting={exporting}
+      actingAs={actingAs}
+    />
   );
 
   return (
@@ -590,6 +660,31 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
       {/* ------------------------------- Print version -------------------------------- */}
       <PrintableDocument kind={kind} header={header} rows={rows} member={member} org={org} totalHours={totalHours} />
 
+      <Dialog
+        open={docsTabBlocked}
+        onClose={() => setDocsTabBlocked(false)}
+        size="sm"
+        title="Your document is copied"
+        description="Your browser blocked the new tab. Open a new Google Doc, then paste with Ctrl+V (⌘V on a Mac)."
+        footer={
+          <>
+            <Button onClick={() => setDocsTabBlocked(false)}>Close</Button>
+            <a
+              href={NEW_GOOGLE_DOC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setDocsTabBlocked(false)}
+              className={buttonStyles({ variant: "primary", size: "md" })}
+            >
+              <ExternalLink />
+              Open a new Google Doc
+            </a>
+          </>
+        }
+      >
+        <p className="text-[13px] text-zinc-600">The copy keeps the headings, labels, and table, so you can edit it in Google Docs.</p>
+      </Dialog>
+
       <ConfirmDialog
         open={pendingDelete !== null}
         onClose={() => setPendingDelete(null)}
@@ -731,11 +826,17 @@ function EditorToolbar({
   state,
   onSave,
   onRetry,
+  onPdf,
+  onGoogleDocs,
+  exporting,
   actingAs,
 }: {
   state: SaveState;
   onSave: () => void;
   onRetry: () => void;
+  onPdf: () => void;
+  onGoogleDocs: () => void;
+  exporting: "pdf" | "docs" | null;
   actingAs: ActingAs;
 }) {
   return (
@@ -773,7 +874,7 @@ function EditorToolbar({
           Saves automatically{actingAs === "admin" ? " · editing as administrator" : ""}
         </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={onSave} disabled={state.state === "saving"}>
           <Save />
           Save
@@ -781,6 +882,14 @@ function EditorToolbar({
         <Button size="sm" onClick={() => window.print()}>
           <Printer />
           Print
+        </Button>
+        <Button size="sm" onClick={onPdf} disabled={exporting !== null}>
+          {exporting === "pdf" ? <LoaderCircle className="animate-spin" /> : <FileDown />}
+          Download PDF
+        </Button>
+        <Button size="sm" onClick={onGoogleDocs} disabled={exporting !== null}>
+          {exporting === "docs" ? <LoaderCircle className="animate-spin" /> : <Copy />}
+          Copy to Google Docs
         </Button>
       </div>
     </div>

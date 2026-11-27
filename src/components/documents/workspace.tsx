@@ -182,7 +182,8 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
               </li>
               <li className="flex gap-2.5">
                 <Printer className="mt-0.5 size-4 shrink-0 text-zinc-400" />
-                Use Print to produce a paper copy in the official document format.
+                Use Print for a paper copy or Download PDF for a file, both in the official document format. Copy to Google Docs
+                opens a new Google Doc you can paste into.
               </li>
               <li className="flex gap-2.5">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-zinc-400" />
