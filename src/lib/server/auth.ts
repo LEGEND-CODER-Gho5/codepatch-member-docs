@@ -26,6 +26,12 @@ export type Viewer = {
   hasSiteSession: boolean;
   admin: boolean;
   member: { id: string; fullName: string } | null;
+  /**
+   * The website-password session has not yet accepted the current policies and
+   * procedures (welcome page). Pages behind the website password redirect to
+   * /welcome until it has.
+   */
+  rulesPending: boolean;
 };
 
 export type SessionTokens = Partial<Record<SessionKind, string>>;
@@ -43,6 +49,7 @@ type SessionRow = {
   credential_version: number;
   expires_at: Date;
   last_seen_at: Date;
+  rules_accepted_version?: number | null;
 };
 
 function isFresh(row: SessionRow, idleMinutes: number | null): boolean {
@@ -58,18 +65,20 @@ async function touch(row: SessionRow) {
   }
 }
 
-async function validateSiteOrAdmin(kind: "site" | "admin", token: string, settings: SettingsRow): Promise<boolean> {
-  if (!token || token.length > 128) return false;
+/** Returns the session when it is valid, otherwise null. */
+async function validateSiteOrAdmin(kind: "site" | "admin", token: string, settings: SettingsRow): Promise<SessionRow | null> {
+  if (!token || token.length > 128) return null;
   const row = await sqlOne<SessionRow>(
-    "SELECT id, member_id, credential_version, expires_at, last_seen_at FROM sessions WHERE token_hash = $1 AND kind = $2",
+    `SELECT id, member_id, credential_version, expires_at, last_seen_at, rules_accepted_version
+       FROM sessions WHERE token_hash = $1 AND kind = $2`,
     [sha256(token), kind],
   );
-  if (!row) return false;
+  if (!row) return null;
   const version = kind === "site" ? settings.site_password_version : settings.admin_password_version;
-  if (row.credential_version !== version) return false;
-  if (!isFresh(row, kind === "admin" ? settings.admin_idle_minutes : null)) return false;
+  if (row.credential_version !== version) return null;
+  if (!isFresh(row, kind === "admin" ? settings.admin_idle_minutes : null)) return null;
   await touch(row);
-  return true;
+  return row;
 }
 
 async function validateMember(token: string, settings: SettingsRow): Promise<{ id: string; fullName: string } | null> {
@@ -94,17 +103,19 @@ async function validateMember(token: string, settings: SettingsRow): Promise<{ i
 export async function resolveViewer(tokens: SessionTokens): Promise<Viewer> {
   const settings = await getSettings();
   if (!settings) {
-    return { configured: false, siteAccess: false, hasSiteSession: false, admin: false, member: null };
+    return { configured: false, siteAccess: false, hasSiteSession: false, admin: false, member: null, rulesPending: false };
   }
-  const site = tokens.site ? await validateSiteOrAdmin("site", tokens.site, settings) : false;
-  const admin = tokens.admin ? await validateSiteOrAdmin("admin", tokens.admin, settings) : false;
+  const siteRow = tokens.site ? await validateSiteOrAdmin("site", tokens.site, settings) : null;
+  const admin = tokens.admin ? (await validateSiteOrAdmin("admin", tokens.admin, settings)) !== null : false;
   const member = tokens.member ? await validateMember(tokens.member, settings) : null;
+  const site = siteRow !== null;
   return {
     configured: true,
     hasSiteSession: site,
     admin,
     member,
     siteAccess: site || admin || member !== null,
+    rulesPending: site && siteRow.rules_accepted_version !== settings.site_rules_version,
   };
 }
 
@@ -143,7 +154,24 @@ export function parseSessionCookies(cookieHeader: string | null): SessionTokens 
 export async function requireSiteAccess(): Promise<Viewer> {
   const viewer = await getViewer();
   if (!viewer.siteAccess) redirect("/login");
+  if (viewer.rulesPending) redirect("/welcome");
   return viewer;
+}
+
+/**
+ * Records that the visitor behind the current website-password session accepted
+ * the given version of the policies and procedures. Returns false without a
+ * valid site session.
+ */
+export async function acceptSiteRules(version: number): Promise<boolean> {
+  const viewer = await getViewer();
+  if (!viewer.hasSiteSession) return false;
+  const token = (await cookies()).get(SESSION_COOKIES.site)?.value ?? "";
+  const rows = await sql<{ id: string }>(
+    "UPDATE sessions SET rules_accepted_version = $2 WHERE token_hash = $1 AND kind = 'site' RETURNING id",
+    [sha256(token), version],
+  );
+  return rows.length > 0;
 }
 
 export async function requireAdminPage(): Promise<Viewer> {

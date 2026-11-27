@@ -99,6 +99,7 @@ export const FIELD_LABELS: Record<string, string> = {
   chapter_name: "Chapter",
   admin_display_name: "Administrator Display Name",
   default_documentation_period: "Default Documentation Period",
+  policies: "Policies and Procedures",
   site_session_hours: "Directory Session Length (hours)",
   member_idle_minutes: "Member Idle Timeout (minutes)",
   admin_idle_minutes: "Administrator Idle Timeout (minutes)",

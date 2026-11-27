@@ -30,6 +30,7 @@ export default async function MemberWorkspacePage({
   // Server-side authorization: only this member's own session may open this page.
   const viewer = await getViewer();
   if (!viewer.siteAccess) redirect("/login");
+  if (viewer.rulesPending) redirect("/welcome");
   if (!viewer.member || viewer.member.id !== id) {
     if (viewer.admin) redirect(`/admin/documentation/${id}`);
     redirect(`/members/${id}/login`);

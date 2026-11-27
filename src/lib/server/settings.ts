@@ -19,6 +19,10 @@ export type SettingsRow = {
   site_session_hours: number;
   member_idle_minutes: number;
   admin_idle_minutes: number;
+  /** Policies and procedures text ('' = DEFAULT_SITE_RULES). */
+  site_rules: string;
+  site_rules_version: number;
+  site_rules_updated_at: Date | null;
   updated_at: Date;
 };
 

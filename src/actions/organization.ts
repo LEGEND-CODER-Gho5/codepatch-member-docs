@@ -5,7 +5,8 @@ import { getAdminActor, startSession } from "@/lib/server/auth";
 import { recordAudit } from "@/lib/server/audit";
 import { getSettings, type SettingsRow } from "@/lib/server/settings";
 import { hashPassword, verifyPassword } from "@/lib/server/security";
-import { cleanInteger, cleanLine, isUuid, LIMITS } from "@/lib/validation";
+import { cleanFreeText, cleanInteger, cleanLine, isUuid, LIMITS } from "@/lib/validation";
+import { DEFAULT_SITE_RULES, effectiveRules, SITE_RULES_MAX_LENGTH } from "@/lib/site-rules";
 import type { ActionResult } from "@/lib/types";
 import { ActionError, fail, handleActionError, UNAUTHORIZED } from "./shared";
 
@@ -266,6 +267,47 @@ export async function updateOrganizationAction(input: {
     return { ok: true, data: null };
   } catch (error) {
     return handleActionError(error, "updateOrganization");
+  }
+}
+
+/**
+ * Saves the policies and procedures shown on the welcome page. Saving changed
+ * text increases site_rules_version, so every visitor accepts the new text on
+ * their next page. Empty text (or the default text) restores the default.
+ */
+export async function updateSiteRulesAction(input: { text: string }): Promise<ActionResult<null>> {
+  try {
+    const actor = await getAdminActor();
+    if (!actor) return UNAUTHORIZED;
+    const cleaned = cleanFreeText(input?.text, SITE_RULES_MAX_LENGTH, "Policies and procedures");
+    if (!cleaned.ok) return fail(cleaned.error, "invalid");
+    const text = cleaned.value.trim();
+    const stored = text === DEFAULT_SITE_RULES.trim() ? "" : text;
+
+    await withTransaction(async (tx) => {
+      const [before] = await tx.query<{ site_rules: string }>("SELECT site_rules FROM application_settings WHERE id = 1 FOR UPDATE");
+      if (!before) throw new ActionError("Settings are not available.");
+      if (effectiveRules(before.site_rules).trim() === effectiveRules(stored).trim()) return; // nothing changed
+      await tx.query(
+        `UPDATE application_settings
+            SET site_rules = $1, site_rules_version = site_rules_version + 1, site_rules_updated_at = now(), updated_at = now()
+          WHERE id = 1`,
+        [stored],
+      );
+      await recordAudit(tx, {
+        actor,
+        action: "edited",
+        entityType: "settings",
+        recordId: "site_rules",
+        summary: stored ? "Updated the policies and procedures" : "Restored the default policies and procedures",
+        previous: { policies: effectiveRules(before.site_rules) },
+        next: { policies: effectiveRules(stored) },
+        realtime: ["directory"],
+      });
+    });
+    return { ok: true, data: null };
+  } catch (error) {
+    return handleActionError(error, "updateSiteRules");
   }
 }
 

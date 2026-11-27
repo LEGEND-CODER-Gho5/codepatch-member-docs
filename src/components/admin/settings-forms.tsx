@@ -8,8 +8,11 @@ import {
   changeSitePasswordAction,
   updateOrganizationAction,
   updatePreferencesAction,
+  updateSiteRulesAction,
 } from "@/actions/organization";
+import { RulesText } from "@/components/rules-text";
 import { Button } from "@/components/ui/button";
+import { DEFAULT_SITE_RULES, SITE_RULES_MAX_LENGTH } from "@/lib/site-rules";
 import { Field, FormError, Input, Select } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/inputs";
 import { toast } from "@/components/ui/toast";
@@ -83,6 +86,47 @@ export function OrganizationForm({
         </div>
       </div>
       <FormFooter pending={pending} label="Save organization" note="Document wording from the official template is never changed." />
+    </form>
+  );
+}
+
+export function SiteRulesForm({ initial, updatedAt }: { initial: string; updatedAt: string | null }) {
+  const [text, setText] = useState(initial);
+  const { pending, error, submit } = useSubmit(() => updateSiteRulesAction({ text }), "Policies and procedures saved");
+  return (
+    <form onSubmit={submit} noValidate>
+      <div className="grid gap-4 px-4 py-4 xl:grid-cols-2">
+        <Field
+          label="Policies and procedures"
+          htmlFor="site-rules"
+          hint='Start a line with "# " for a heading and "- " for a bullet point. Other lines are paragraphs.'
+        >
+          <textarea
+            id="site-rules"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            maxLength={SITE_RULES_MAX_LENGTH}
+            rows={20}
+            className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-[12.5px] leading-relaxed text-zinc-900 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+          />
+        </Field>
+        <div className="space-y-1.5">
+          <p className="text-[13px] font-medium text-zinc-800">Preview</p>
+          <div className="max-h-[470px] overflow-y-auto rounded-md border border-zinc-200 bg-zinc-50/60 px-4 py-3">
+            <RulesText text={text} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 xl:col-span-2">
+          <Button size="sm" onClick={() => setText(DEFAULT_SITE_RULES)} disabled={pending || text === DEFAULT_SITE_RULES}>
+            Restore default text
+          </Button>
+          <p className="text-[12px] text-zinc-500">{updatedAt ? `Last changed ${updatedAt}.` : "Using the default text."}</p>
+        </div>
+        <div className="xl:col-span-2">
+          <FormError message={error} />
+        </div>
+      </div>
+      <FormFooter pending={pending} label="Save policies" note="Saving changes asks every visitor to accept the new version on their next page." />
     </form>
   );
 }

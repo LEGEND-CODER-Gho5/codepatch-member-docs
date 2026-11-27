@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { sql, sqlOne, withTransaction } from "@/lib/server/db";
-import { endSession, getClientInfo, getViewer, startSession } from "@/lib/server/auth";
+import { acceptSiteRules, endSession, getClientInfo, getViewer, startSession } from "@/lib/server/auth";
 import { getSettings } from "@/lib/server/settings";
 import { verifyPassword } from "@/lib/server/security";
 import { checkLoginThrottle, failureDelay, recordLoginAttempt } from "@/lib/server/rate-limit";
@@ -46,7 +46,23 @@ export async function siteLoginAction(_previous: LoginState, formData: FormData)
   }
 
   await startSession("site", settings.site_password_version);
-  redirect(safeNext(formData.get("next"), "/directory"));
+  // Every visit starts with the portal guide and the policies and procedures.
+  const next = safeNext(formData.get("next"), "/directory");
+  redirect(next === "/directory" ? "/welcome" : `/welcome?next=${encodeURIComponent(next)}`);
+}
+
+/* ---------------------- Policies and procedures (welcome) --------------------- */
+
+export async function acceptRulesAction(formData: FormData): Promise<void> {
+  const next = safeNext(formData.get("next"), "/directory");
+  const back = next === "/directory" ? "/welcome" : `/welcome?next=${encodeURIComponent(next)}`;
+  const settings = await getSettings();
+  if (!settings) redirect("/login");
+  // The version the visitor read; if the policies changed meanwhile, show the new text instead.
+  const shownVersion = Number(formData.get("version"));
+  if (formData.get("agree") !== "yes" || shownVersion !== settings.site_rules_version) redirect(back);
+  if (!(await acceptSiteRules(shownVersion))) redirect("/login");
+  redirect(next);
 }
 
 /* ------------------------ B. Individual member passwords ---------------------- */
@@ -57,6 +73,7 @@ export async function memberLoginAction(_previous: LoginState, formData: FormDat
 
   const viewer = await getViewer();
   if (!viewer.siteAccess) redirect("/login");
+  if (viewer.rulesPending) redirect("/welcome");
 
   const password = readPassword(formData);
   if (!password) return { error: "Enter your personal documentation password." };
@@ -111,6 +128,7 @@ export async function memberLoginAction(_previous: LoginState, formData: FormDat
 export async function adminLoginAction(_previous: LoginState, formData: FormData): Promise<LoginState> {
   const viewer = await getViewer();
   if (!viewer.siteAccess) redirect("/login");
+  if (viewer.rulesPending) redirect("/welcome?next=/admin/login");
 
   const password = readPassword(formData);
   if (!password) return { error: "Enter the administrator password." };

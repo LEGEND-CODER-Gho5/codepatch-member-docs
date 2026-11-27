@@ -13,6 +13,7 @@ export const metadata: Metadata = { title: "Administrator sign-in" };
 export default async function AdminLoginPage() {
   const viewer = await getViewer();
   if (!viewer.siteAccess) redirect("/login?next=/admin/login");
+  if (viewer.rulesPending) redirect("/welcome?next=/admin/login");
   if (viewer.admin) redirect("/admin");
   const org = await getOrgInfo();
 

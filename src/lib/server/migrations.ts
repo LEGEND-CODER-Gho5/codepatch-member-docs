@@ -448,6 +448,24 @@ END;
 $$;
 `,
   },
+  {
+    version: 5,
+    name: "site_rules_acceptance",
+    sql: /* sql */ `
+-- After entering the shared website password, visitors read the portal guide
+-- and the chapter's policies and procedures and must accept them before the
+-- directory opens. site_rules holds the administrator's text ('' = the
+-- built-in default); site_rules_version increases whenever it is saved, so
+-- every open session has to accept the new version. Each site session records
+-- the version its visitor accepted. Existing sessions start with none, so
+-- visitors who are already signed in see the page once.
+ALTER TABLE application_settings
+  ADD COLUMN site_rules text NOT NULL DEFAULT '',
+  ADD COLUMN site_rules_version integer NOT NULL DEFAULT 1,
+  ADD COLUMN site_rules_updated_at timestamptz;
+ALTER TABLE sessions ADD COLUMN rules_accepted_version integer;
+`,
+  },
 ];
 
 /* ------------------------------------------------------------------------- */

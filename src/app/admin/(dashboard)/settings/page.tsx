@@ -6,12 +6,14 @@ import {
   OrganizationForm,
   PreferencesForm,
   SitePasswordForm,
+  SiteRulesForm,
 } from "@/components/admin/settings-forms";
 import { PageHeader, Panel } from "@/components/ui/primitives";
 import { formatDateTime } from "@/lib/format";
 import { requireAdminPage } from "@/lib/server/auth";
 import { listMembers, listPositions } from "@/lib/server/queries";
 import { getSettings } from "@/lib/server/settings";
+import { effectiveRules } from "@/lib/site-rules";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -36,6 +38,17 @@ export default async function SettingsPage() {
               adminDisplayName: settings.admin_display_name,
               defaultDocumentationPeriod: settings.default_documentation_period,
             }}
+          />
+        </Panel>
+
+        <Panel
+          title="Welcome page"
+          description="Shown after the shared website password. Visitors must accept these policies before the directory opens."
+          className="2xl:col-span-2"
+        >
+          <SiteRulesForm
+            initial={effectiveRules(settings.site_rules)}
+            updatedAt={settings.site_rules_updated_at ? formatDateTime(settings.site_rules_updated_at) : null}
           />
         </Panel>
 

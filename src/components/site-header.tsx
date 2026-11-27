@@ -45,6 +45,7 @@ export function SiteHeader({
           My documentation
         </HeaderLink>
       )}
+      <HeaderLink href="/welcome">Policies</HeaderLink>
     </>
   );
 

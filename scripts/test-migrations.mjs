@@ -1,4 +1,4 @@
-// Tests for the migration runner and migrations 2-4, using throwaway in-memory
+// Tests for the migration runner and migrations 2-5, using throwaway in-memory
 // PostgreSQL databases (PGlite). One database simulates Supabase: it has the
 // anon / authenticated / service_role roles, Supabase-style default privileges,
 // and a table belonging to another application.
@@ -59,6 +59,16 @@ async function value(client, sql, params = []) {
 }
 
 const allVersions = MIGRATIONS.map((migration) => migration.version);
+/** The message assertSchemaIsCurrent gives for a database that has the first `count` migrations. */
+const pendingPattern = (count) => {
+  const rest = allVersions.slice(count);
+  // A plain substring match, with the list ending at the closing parenthesis of the message.
+  const expected = `pending migration${rest.length === 1 ? "" : "s"}: ${rest.join(", ")})`;
+  return (error) => {
+    assert.ok(String(error?.message).includes(expected), `expected "${expected}" in: ${error?.message}`);
+    return true;
+  };
+};
 const API_ROLES = ["anon", "authenticated", "service_role"];
 
 await test("an empty database reports no schema and is refused when automatic migration is off", () =>
@@ -89,18 +99,19 @@ async function migrateTo(client, count) {
   }
 }
 
-await test("a database at migration 1 is reported as pending migrations 2, 3 and 4, then upgraded", () =>
+await test("a database at migration 1 is reported as pending every later migration, then upgraded", () =>
   withDatabase(async (client, db) => {
     await migrateTo(client, 1);
-    await assert.rejects(assertSchemaIsCurrent(db), /pending migrations: 2, 3, 4.*npm run db:migrate/s);
-    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [2, 3, 4]);
+    await assert.rejects(assertSchemaIsCurrent(db), pendingPattern(1));
+    await assert.rejects(assertSchemaIsCurrent(db), /npm run db:migrate/);
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), allVersions.slice(1));
     await assertSchemaIsCurrent(db);
   }));
 
 await test("a database at migration 2 (an existing development database) gets migration 3, which caps merged audit edits", () =>
   withDatabase(async (client, db) => {
     await migrateTo(client, 2);
-    await assert.rejects(assertSchemaIsCurrent(db), /pending migrations: 3, 4/);
+    await assert.rejects(assertSchemaIsCurrent(db), pendingPattern(2));
     const insert = () =>
       client.query(
         `INSERT INTO audit_logs (actor_type, actor_id, actor_name, action, entity_type, record_id, summary, new_values, occurred_at, last_occurred_at)
@@ -111,7 +122,7 @@ await test("a database at migration 2 (an existing development database) gets mi
     // Migration 1's trigger looks only at the last change, so this merge is still allowed.
     await client.query("UPDATE audit_logs SET new_values = '{\"a\":2}' WHERE id = $1", [before]);
 
-    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [3, 4]);
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), allVersions.slice(2));
     await assertSchemaIsCurrent(db);
     const after = (await insert()).rows[0].id;
     await assert.rejects(client.query("UPDATE audit_logs SET new_values = '{\"a\":2}' WHERE id = $1", [after]), /limited to 30 minutes/);
@@ -125,7 +136,7 @@ await test("a database at migration 2 (an existing development database) gets mi
 await test("a database at migration 3 (with members) gets migration 4: other departments start empty and keep integrity", () =>
   withDatabase(async (client, db) => {
     await migrateTo(client, 3);
-    await assert.rejects(assertSchemaIsCurrent(db), /pending migration: 4/);
+    await assert.rejects(assertSchemaIsCurrent(db), pendingPattern(3));
     const [coding, math, art] = (
       await client.query("INSERT INTO departments (name) VALUES ('Coding'), ('Math'), ('Art') RETURNING id")
     ).rows.map((row) => row.id);
@@ -134,7 +145,7 @@ await test("a database at migration 3 (with members) gets migration 4: other dep
       await client.query("INSERT INTO members (full_name, department_id, position_id) VALUES ('Ada', $1, $2) RETURNING id", [coding, position])
     ).rows[0].id;
 
-    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), [4]);
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), allVersions.slice(3));
     await assertSchemaIsCurrent(db);
     assert.equal(await value(client, "SELECT count(*)::int FROM members"), 1, "existing members are kept");
     assert.equal(await value(client, "SELECT department_id FROM members WHERE id = $1", [member]), coding, "main department unchanged");
@@ -150,6 +161,23 @@ await test("a database at migration 3 (with members) gets migration 4: other dep
     await client.query("DELETE FROM members WHERE id = $1", [member]);
     assert.equal(await value(client, "SELECT count(*)::int FROM member_departments"), 0, "deleting a member removes their rows");
     await client.query("DELETE FROM departments WHERE id = $1", [math]);
+  }));
+
+await test("a database at migration 4 (with settings and signed-in visitors) gets migration 5: the welcome page starts with the default text", () =>
+  withDatabase(async (client, db) => {
+    await migrateTo(client, 4);
+    await assert.rejects(assertSchemaIsCurrent(db), pendingPattern(4));
+    await client.query("INSERT INTO application_settings (id, site_password_hash, admin_password_hash) VALUES (1, 'x', 'y')");
+    await client.query("INSERT INTO sessions (token_hash, kind, credential_version, expires_at) VALUES ('t1', 'site', 1, now() + interval '1 hour')");
+
+    assert.deepEqual(await applyMigrations(db, { advisoryLock: false }), allVersions.slice(4));
+    await assertSchemaIsCurrent(db);
+    const { rows: [settings] } = await client.query("SELECT site_password_hash, site_rules, site_rules_version, site_rules_updated_at FROM application_settings");
+    assert.deepEqual(settings, { site_password_hash: "x", site_rules: "", site_rules_version: 1, site_rules_updated_at: null }, "existing settings are kept; '' means the default text");
+    assert.equal(await value(client, "SELECT count(*)::int FROM sessions"), 1, "signed-in visitors are not signed out");
+    assert.equal(await value(client, "SELECT rules_accepted_version FROM sessions"), null, "existing visitors have not accepted yet, so they see the page once");
+    await client.query("UPDATE sessions SET rules_accepted_version = 1");
+    assert.equal(await value(client, "SELECT rules_accepted_version FROM sessions"), 1);
   }));
 
 await test(`migrations set a ${MIGRATION_LOCK_TIMEOUT} lock timeout first, and stop cleanly when a lock is not granted in time`, async () => {
