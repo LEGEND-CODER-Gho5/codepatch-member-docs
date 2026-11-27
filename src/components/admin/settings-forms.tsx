@@ -107,7 +107,7 @@ export function SiteRulesForm({ initial, updatedAt }: { initial: string; updated
             onChange={(event) => setText(event.target.value)}
             maxLength={SITE_RULES_MAX_LENGTH}
             rows={20}
-            className="block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 font-mono text-[12.5px] leading-relaxed text-zinc-900 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="block w-full rounded-md border border-zinc-300 bg-surface px-3 py-2 font-mono text-[12.5px] leading-relaxed text-zinc-900 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </Field>
         <div className="space-y-1.5">

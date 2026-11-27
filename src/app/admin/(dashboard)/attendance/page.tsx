@@ -49,7 +49,7 @@ export default async function AttendancePage() {
           <MeetingsList meetings={meetings.map(toClient)} />
         </Panel>
 
-        <details className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+        <details className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
           <summary className="cursor-pointer px-4 py-3 text-[13.5px] font-medium text-zinc-800 hover:bg-zinc-50">
             Add a past meeting (enter the hours yourself)
           </summary>

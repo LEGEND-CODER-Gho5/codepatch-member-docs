@@ -49,12 +49,14 @@ export default async function MemberWorkspacePage({
     <div className="min-h-dvh">
       <SiteHeader org={org} viewer={viewer} current="workspace" live />
       <LiveRefresh scopes={["member", "directory"]} memberId={id} />
-      <div className="border-b border-zinc-200 bg-white print:hidden">
+      <div className="border-b border-zinc-200 bg-surface print:hidden">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar name={member.fullName} className="size-10 text-[13px]" />
             <div className="min-w-0">
-              <h1 className="truncate text-[19px] leading-tight font-semibold tracking-[-0.01em] text-zinc-950">{member.fullName}</h1>
+              <h1 data-large-title={member.fullName} className="truncate text-[19px] leading-tight font-semibold tracking-[-0.01em] text-zinc-950">
+                {member.fullName}
+              </h1>
               <p className="mt-0.5 truncate text-[12.5px] text-zinc-500">
                 {member.positionName} · {formatDepartments(member.departmentName, member.otherDepartmentNames)} · <span className="font-mono">{member.memberCode}</span>
               </p>

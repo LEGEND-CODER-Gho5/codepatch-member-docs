@@ -84,7 +84,7 @@ function NestedList({ items }: { items: unknown[] }) {
   return (
     <ol className="space-y-2">
       {items.map((item, index) => (
-        <li key={index} className="rounded border border-zinc-200 bg-white px-2.5 py-2 text-[12.5px]">
+        <li key={index} className="rounded border border-zinc-200 bg-surface px-2.5 py-2 text-[12.5px]">
           {item && typeof item === "object" ? (
             <dl className="space-y-0.5">
               {Object.entries(item as Record<string, unknown>)

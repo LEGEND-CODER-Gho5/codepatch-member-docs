@@ -23,6 +23,7 @@ import { adminLogoutAction } from "@/actions/auth";
 import { Wordmark } from "@/components/brand";
 import { LiveIndicator, LiveRefresh } from "@/components/realtime";
 import { Button } from "@/components/ui/button";
+import { CompactTitle, useScrolled } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { DepartmentOption, NotificationItem, OrgInfo, PositionOption } from "@/lib/types";
 import { AddMemberDialog } from "./member-dialogs";
@@ -136,6 +137,7 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const scrolled = useScrolled();
   const [addOpen, setAddOpen] = useState(false);
   // Each opening of "Add Member" mounts a fresh form.
   const [addSession, setAddSession] = useState(0);
@@ -155,14 +157,14 @@ export function AdminShell({
     <AdminUIContext.Provider value={{ openAddMember, departments, positions }}>
       <LiveRefresh scopes={["directory", "member", "admin"]} />
       <div className="min-h-dvh lg:pl-[248px] print:pl-0">
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-black/40 bg-charcoal-950 lg:block print:hidden">
+        <aside className="theme-fixed fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-black/40 bg-charcoal-950 lg:block print:hidden">
           <SidebarContent org={org} adminName={org.adminDisplayName} unread={unread} />
         </aside>
 
         {drawerOpen && (
           <div className="fixed inset-0 z-50 lg:hidden print:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
             <div className="absolute inset-0 bg-charcoal-950/50" onClick={() => setDrawerOpen(false)} />
-            <div className="absolute inset-y-0 left-0 w-[264px] bg-charcoal-950 shadow-raised">
+            <div className="theme-fixed absolute inset-y-0 left-0 w-[264px] bg-charcoal-950 shadow-raised">
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
@@ -176,19 +178,27 @@ export function AdminShell({
           </div>
         )}
 
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-zinc-200 bg-white/95 px-4 backdrop-blur sm:px-6 print:hidden">
+        {/* Blends into the page at the top; once the page scrolls, it gains an edge and the page title moves into it. */}
+        <header
+          className={cn(
+            "sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 transition-[background-color,border-color] duration-200 sm:px-6 print:hidden",
+            scrolled ? "border-zinc-200 bg-surface/90 backdrop-blur-md" : "border-transparent bg-zinc-100",
+          )}
+        >
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open navigation"
-            className="-ml-1 rounded-md p-1.5 text-zinc-600 hover:bg-zinc-100 lg:hidden"
+            className="-ml-1 rounded-md p-1.5 text-zinc-600 hover:bg-zinc-200/60 lg:hidden"
           >
             <Menu className="size-5" />
           </button>
-          <p className="hidden truncate text-[13px] text-zinc-500 sm:block">
-            {org.organizationName} <span className="text-zinc-300">/</span> {org.chapterName}
-          </p>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          <CompactTitle className="flex-1" titleClassName="text-zinc-950">
+            <p className="hidden truncate text-[13px] text-zinc-500 sm:block">
+              {org.organizationName} <span className="text-zinc-300">/</span> {org.chapterName}
+            </p>
+          </CompactTitle>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LiveIndicator className="hidden sm:inline-flex" />
             <Button variant="primary" size="sm" onClick={openAddMember}>
               <UserPlus />

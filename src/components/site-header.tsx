@@ -5,6 +5,7 @@ import { exitSiteAction } from "@/actions/auth";
 import { Wordmark } from "@/components/brand";
 import { LiveIndicator } from "@/components/realtime";
 import { buttonStyles } from "@/components/ui/button";
+import { CompactTitle } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { Viewer } from "@/lib/server/auth";
 import type { OrgInfo } from "@/lib/types";
@@ -50,10 +51,13 @@ export function SiteHeader({
   );
 
   return (
-    <header className="sticky top-0 z-30 border-b border-black/40 bg-charcoal-950 print:hidden">
+    <header className="theme-fixed sticky top-0 z-30 border-b border-black/40 bg-charcoal-950 print:hidden">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-5 px-4 sm:px-6">
-        <Link href="/directory" className="rounded-md">
-          <Wordmark organizationName={org.organizationName} subtitle="Member Documentation" tone="light" />
+        <Link href="/directory" className="min-w-0 rounded-md">
+          {/* Once the page title scrolls away, it takes the wordmark's place in this bar. */}
+          <CompactTitle titleClassName="text-white">
+            <Wordmark organizationName={org.organizationName} subtitle="Member Documentation" tone="light" />
+          </CompactTitle>
         </Link>
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
           {links}

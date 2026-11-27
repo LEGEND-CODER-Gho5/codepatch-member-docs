@@ -48,7 +48,7 @@ export function HistoryFilters({ departments, total }: { departments: Department
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by member, actor, or change"
             aria-label="Search history"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select value={value("department")} onChange={(event) => update({ department: event.target.value })} aria-label="Department" className="w-44">
@@ -94,7 +94,7 @@ export function HistoryFilters({ departments, total }: { departments: Department
         <button
           type="button"
           onClick={() => update({ sort: oldestFirst ? "" : "oldest" })}
-          className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-white px-2.5 font-medium text-zinc-700 hover:bg-zinc-50"
+          className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-md border border-zinc-300 bg-surface px-2.5 font-medium text-zinc-700 hover:bg-zinc-50"
         >
           <ArrowDownUp className="size-3.5" />
           {oldestFirst ? "Oldest first" : "Newest first"}

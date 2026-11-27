@@ -56,7 +56,7 @@ export function DepartmentsManager({ departments }: { departments: DepartmentIte
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+    <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
       <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3">
         <p className="text-[13px] text-zinc-500">
           {departments.length} department{departments.length === 1 ? "" : "s"} · shown as columns in the member directory, in display order

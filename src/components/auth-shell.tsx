@@ -20,7 +20,7 @@ const STEPS = [
 export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 | 3; children: ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(400px,40%)_1fr]">
-      <aside className="hidden flex-col justify-between border-r border-black/40 bg-charcoal-950 px-12 py-10 lg:flex">
+      <aside className="theme-fixed hidden flex-col justify-between border-r border-black/40 bg-charcoal-950 px-12 py-10 lg:flex">
         <Wordmark organizationName={org.organizationName} subtitle={org.chapterName} tone="light" />
         <div className="max-w-[360px]">
           <p className="text-[11.5px] font-semibold tracking-[0.12em] text-brand-300 uppercase">Member Documentation System</p>
@@ -52,7 +52,7 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
         <p className="text-[12px] text-zinc-600">Restricted to authorized members of {org.organizationName}.</p>
       </aside>
       <main className="flex flex-col bg-zinc-50">
-        <div className="border-b border-zinc-200 bg-white px-5 py-3 lg:hidden">
+        <div className="border-b border-zinc-200 bg-surface px-5 py-3 lg:hidden">
           <Wordmark organizationName={org.organizationName} subtitle={org.chapterName} />
         </div>
         <div className="flex flex-1 items-center justify-center px-5 py-12">

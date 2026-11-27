@@ -181,7 +181,7 @@ export function LiveMeeting({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a member"
             aria-label="Find a member"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Filter by department" className="w-48">
@@ -367,7 +367,7 @@ export function AttendanceForm({ members, departments }: { members: AttendanceMe
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a member"
             aria-label="Find a member"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Filter by department" className="w-48">
@@ -418,7 +418,7 @@ export function AttendanceForm({ members, departments }: { members: AttendanceMe
                       value={present[member.id]}
                       onChange={(event) => setPresent({ ...present, [member.id]: event.target.value.replace(/[^\d.]/g, "") })}
                       placeholder="0"
-                      className="tabular h-8 w-16 rounded-md border border-zinc-300 bg-white px-2 text-right text-[13px] focus:border-brand-500 focus:outline-none"
+                      className="tabular h-8 w-16 rounded-md border border-zinc-300 bg-surface px-2 text-right text-[13px] focus:border-brand-500 focus:outline-none"
                     />
                     <span className="tabular w-16 text-right font-medium text-zinc-900">
                       = {Number.isFinite(meetingHours) ? formatHours(credited(member.id)) : "—"} h
@@ -473,7 +473,7 @@ function AttendeeHours({ meetingId, attendee, max }: { meetingId: string; attend
         value={value}
         onChange={(event) => setValue(event.target.value.replace(/[^\d.]/g, ""))}
         aria-label={`Hours for ${attendee.fullName}`}
-        className="tabular h-8 w-16 rounded-md border border-zinc-300 bg-white px-2 text-right text-[13px] focus:border-brand-500 focus:outline-none"
+        className="tabular h-8 w-16 rounded-md border border-zinc-300 bg-surface px-2 text-right text-[13px] focus:border-brand-500 focus:outline-none"
       />
       <Button size="xs" onClick={() => void save()} disabled={!changed || pending || toNumber(value) > max}>
         {pending && <LoaderCircle className="animate-spin" />}

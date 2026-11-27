@@ -46,7 +46,9 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <p className="text-[13px] font-medium text-brand-700">
           {org.organizationName}, {org.chapterName}
         </p>
-        <h1 className="mt-1.5 text-[28px] leading-tight font-semibold tracking-[-0.015em] text-zinc-950">Welcome to the member portal</h1>
+        <h1 data-large-title="Welcome" className="mt-1.5 text-[28px] leading-tight font-semibold tracking-[-0.015em] text-zinc-950">
+          Welcome to the member portal
+        </h1>
         <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-zinc-600">
           {mustAccept
             ? "Before you open the member directory, read how the portal works and the chapter's policies and procedures."
@@ -84,7 +86,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
               <p className="text-[12.5px] text-zinc-500">Updated {formatDateLong(settings.site_rules_updated_at)}</p>
             )}
           </div>
-          <div className="mt-4 rounded-lg border border-zinc-200 bg-white px-6 py-5">
+          <div className="mt-4 rounded-lg border border-zinc-200 bg-surface px-6 py-5">
             <RulesText text={effectiveRules(settings.site_rules)} />
           </div>
         </section>

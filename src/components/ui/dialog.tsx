@@ -51,7 +51,7 @@ export function Dialog({
         if (!inside) onClose();
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] overflow-visible rounded-lg border border-zinc-200 bg-white p-0 text-zinc-900 shadow-raised",
+        "m-auto w-[calc(100%-2rem)] overflow-visible rounded-lg border border-zinc-200 bg-surface p-0 text-zinc-900 shadow-raised",
         size === "sm" && "max-w-md",
         size === "md" && "max-w-lg",
         size === "lg" && "max-w-2xl",

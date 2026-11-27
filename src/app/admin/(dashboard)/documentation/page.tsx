@@ -73,7 +73,7 @@ async function EntriesView({
   const [entries, members] = await Promise.all([listAllEntries(filters), listMembers()]);
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+    <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
       <form method="get" className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-3">
         <input type="hidden" name="view" value="entries" />
         <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
@@ -84,7 +84,7 @@ async function EntriesView({
             defaultValue={filters.q}
             placeholder="Search entries"
             aria-label="Search entries"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select name="member" defaultValue={filters.member} aria-label="Filter by member" className="w-48">

@@ -36,6 +36,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#16171a",
+  // Light and dark (follows the device); see "Dark mode" in globals.css.
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -7,7 +7,7 @@ import { DOCUMENT_TYPE_LABEL, PERIOD_LABEL } from "@/lib/document-text";
 import { formatDateShort, formatDateTimeShort, formatHours } from "@/lib/format";
 import type { ActingAs, AuditListItem, DocumentRecord, DocumentSummary, DocumentType, OrgInfo, WorkspaceMember } from "@/lib/types";
 import { DocumentEditor } from "./document-editor";
-import { DeleteRecordButton, NewRecordButton } from "./record-actions";
+import { DeleteRecordButton, NewRecordButton, RecordListItem } from "./record-actions";
 
 type Props = {
   mode: ActingAs;
@@ -36,7 +36,7 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
   const label = DOCUMENT_TYPE_LABEL[activeType];
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
         <nav
           aria-label="Documents"
@@ -65,7 +65,7 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
         {record ? (
           <DocumentEditor key={record.id} record={record} member={member} org={org} actingAs={mode} />
         ) : (
-          <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+          <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
             <EmptyState
               icon={<FileText />}
               title={`No ${label} record`}
@@ -97,10 +97,16 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
             <ul className="divide-y divide-zinc-100">
               {ofType.map((summary) => {
                 const active = summary.id === record?.id;
+                const href = `${basePath}?type=${activeType}&doc=${summary.id}`;
                 return (
-                  <li key={summary.id}>
+                  <RecordListItem
+                    key={summary.id}
+                    href={href}
+                    active={active}
+                    target={{ documentId: summary.id, documentType: activeType, actingAs: mode, basePath, periodLabel: summary.period }}
+                  >
                     <Link
-                      href={`${basePath}?type=${activeType}&doc=${summary.id}`}
+                      href={href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "block border-l-2 px-4 py-2.5 transition-colors",
@@ -117,7 +123,7 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
                         {" · "}Updated {formatDateShort(summary.updatedAt)}
                       </p>
                     </Link>
-                  </li>
+                  </RecordListItem>
                 );
               })}
             </ul>

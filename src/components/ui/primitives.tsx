@@ -11,7 +11,7 @@ const toneStyles: Record<Tone, string> = {
   warning: "bg-amber-50 text-amber-800 ring-amber-200",
   danger: "bg-red-50 text-red-800 ring-red-200",
   info: "bg-sky-50 text-sky-800 ring-sky-200",
-  dark: "bg-charcoal-800 text-zinc-100 ring-charcoal-700",
+  dark: "bg-charcoal-800 text-white ring-charcoal-700",
 };
 
 export function Badge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
@@ -64,7 +64,7 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border border-zinc-200 bg-white shadow-panel", className)}>
+    <section className={cn("rounded-lg border border-zinc-200 bg-surface shadow-panel", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 px-4 py-3">
           <div className="min-w-0">
@@ -84,17 +84,26 @@ export function PageHeader({
   description,
   eyebrow,
   actions,
+  compactTitle,
 }: {
   title: ReactNode;
   description?: ReactNode;
   eyebrow?: ReactNode;
   actions?: ReactNode;
+  /** Plain text the top bar shows once the title scrolls away (defaults to the title when it is text). */
+  compactTitle?: string;
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <div className="mb-1 text-[12px] font-medium text-zinc-500">{eyebrow}</div>}
-        <h1 className="text-[21px] leading-tight font-semibold tracking-[-0.01em] text-zinc-950">{title}</h1>
+        {/* Large on phones, like an iPhone app's title; it moves into the top bar as you scroll (CompactTitle). */}
+        <h1
+          data-large-title={compactTitle ?? (typeof title === "string" ? title : undefined)}
+          className="text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[21px] sm:font-semibold sm:tracking-[-0.01em]"
+        >
+          {title}
+        </h1>
         {description && <p className="mt-1 max-w-2xl text-[13.5px] text-zinc-600">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -87,7 +87,7 @@ export default async function AdminOverviewPage() {
         </Link>
       )}
 
-      <section aria-label="Statistics"className="grid overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-panel sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Statistics"className="grid overflow-hidden rounded-lg border border-zinc-200 bg-surface shadow-panel sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((tile, index) => (
           <Link
             key={tile.label}

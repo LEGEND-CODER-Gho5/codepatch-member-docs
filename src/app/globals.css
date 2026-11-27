@@ -27,6 +27,15 @@
   --color-charcoal-900: #1f2024;
   --color-charcoal-950: #16171a;
 
+  /* Colors that change in dark mode beyond the palettes (see "Dark mode" below):
+   * the card/panel background, and solid fills that carry white text. */
+  --color-surface: #ffffff;
+  --color-accent: #48326d;
+  --color-accent-hover: #382756;
+  --color-accent-active: #2a1d41;
+  --color-danger: oklch(50.5% 0.213 27.518);
+  --color-danger-hover: oklch(44.4% 0.177 26.899);
+
   --shadow-panel: 0 1px 2px rgba(17, 17, 24, 0.04), 0 1px 1px rgba(17, 17, 24, 0.03);
   --shadow-raised: 0 12px 32px -12px rgba(22, 18, 34, 0.28), 0 2px 6px rgba(22, 18, 34, 0.08);
   --shadow-sheet: 0 1px 3px rgba(17, 17, 24, 0.06), 0 8px 24px -16px rgba(17, 17, 24, 0.18);
@@ -110,5 +119,186 @@
   }
   .print-break-inside-avoid {
     break-inside: avoid;
+  }
+}
+
+/* ------------------------------- Dark mode -------------------------------
+ * Follows the device's light/dark setting. It is in this stylesheet (loaded
+ * before the first paint), so a dark device never sees a white flash. Every
+ * page uses the same color names; in dark mode those names point at dark
+ * values: light grays become dark grays, and tinted backgrounds (green, amber,
+ * red, purple) become dark tints with light text. Screen only: printed
+ * documents always stay black on white.
+ * Generated from Tailwind's palette and the brand palette above. */
+:root {
+  color-scheme: light dark;
+}
+@media print {
+  :root {
+    color-scheme: light;
+  }
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: oklch(21% 0.006 286);
+    --color-accent: #6b51a0;
+    --color-accent-hover: #7a60b0;
+    --color-accent-active: #5d458e;
+    --color-danger: oklch(52% 0.19 25.5);
+    --color-danger-hover: oklch(57% 0.2 25.5);
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    --shadow-raised: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-sheet: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px -16px rgba(0, 0, 0, 0.6);
+    --color-zinc-50: oklch(18.5% 0.005 286);
+    --color-zinc-100: oklch(16% 0.005 286);
+    --color-zinc-200: oklch(29% 0.007 286);
+    --color-zinc-300: oklch(36% 0.009 286);
+    --color-zinc-400: oklch(58% 0.014 286);
+    --color-zinc-500: oklch(68% 0.014 286);
+    --color-zinc-600: oklch(76% 0.012 286);
+    --color-zinc-700: oklch(82% 0.01 286);
+    --color-zinc-800: oklch(88% 0.007 286);
+    --color-zinc-900: oklch(93% 0.004 286);
+    --color-zinc-950: oklch(97% 0.002 286);
+    --color-brand-50: color-mix(in oklab, #2a1d41 60%, oklch(21% 0.006 286));
+    --color-brand-100: color-mix(in oklab, #382756 60%, oklch(21% 0.006 286));
+    --color-brand-200: color-mix(in oklab, #48326d 75%, oklch(21% 0.006 286));
+    --color-brand-300: #593f84;
+    --color-brand-400: #9478bb;
+    --color-brand-500: #8d72bf;
+    --color-brand-600: #b9a5d5;
+    --color-brand-700: #c9b8e3;
+    --color-brand-800: #d8cce8;
+    --color-brand-900: #ece6f4;
+    --color-brand-950: #f6f3fa;
+    --color-red-50: color-mix(in oklab, oklch(25.8% 0.092 26.042) 55%, oklch(21% 0.006 286));
+    --color-red-100: color-mix(in oklab, oklch(39.6% 0.141 25.723) 45%, oklch(21% 0.006 286));
+    --color-red-200: color-mix(in oklab, oklch(44.4% 0.177 26.899) 55%, oklch(21% 0.006 286));
+    --color-red-300: oklch(50.5% 0.213 27.518);
+    --color-red-400: oklch(63.7% 0.237 25.331);
+    --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-red-600: oklch(70.4% 0.191 22.216);
+    --color-red-700: oklch(80.8% 0.114 19.571);
+    --color-red-800: oklch(88.5% 0.062 18.334);
+    --color-red-900: oklch(93.6% 0.032 17.717);
+    --color-red-950: oklch(97.1% 0.013 17.38);
+    --color-amber-50: color-mix(in oklab, oklch(27.9% 0.077 45.635) 55%, oklch(21% 0.006 286));
+    --color-amber-100: color-mix(in oklab, oklch(41.4% 0.112 45.904) 45%, oklch(21% 0.006 286));
+    --color-amber-200: color-mix(in oklab, oklch(47.3% 0.137 46.201) 55%, oklch(21% 0.006 286));
+    --color-amber-300: oklch(55.5% 0.163 48.998);
+    --color-amber-400: oklch(76.9% 0.188 70.08);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-600: oklch(82.8% 0.189 84.429);
+    --color-amber-700: oklch(87.9% 0.169 91.605);
+    --color-amber-800: oklch(92.4% 0.12 95.746);
+    --color-amber-900: oklch(96.2% 0.059 95.617);
+    --color-amber-950: oklch(98.7% 0.022 95.277);
+    --color-emerald-50: color-mix(in oklab, oklch(26.2% 0.051 172.552) 55%, oklch(21% 0.006 286));
+    --color-emerald-100: color-mix(in oklab, oklch(37.8% 0.077 168.94) 45%, oklch(21% 0.006 286));
+    --color-emerald-200: color-mix(in oklab, oklch(43.2% 0.095 166.913) 55%, oklch(21% 0.006 286));
+    --color-emerald-300: oklch(50.8% 0.118 165.612);
+    --color-emerald-400: oklch(69.6% 0.17 162.48);
+    --color-emerald-500: oklch(69.6% 0.17 162.48);
+    --color-emerald-600: oklch(76.5% 0.177 163.223);
+    --color-emerald-700: oklch(84.5% 0.143 164.978);
+    --color-emerald-800: oklch(90.5% 0.093 164.15);
+    --color-emerald-900: oklch(95% 0.052 163.051);
+    --color-emerald-950: oklch(97.9% 0.021 166.113);
+    --color-sky-50: color-mix(in oklab, oklch(29.3% 0.066 243.157) 55%, oklch(21% 0.006 286));
+    --color-sky-100: color-mix(in oklab, oklch(39.1% 0.09 240.876) 45%, oklch(21% 0.006 286));
+    --color-sky-200: color-mix(in oklab, oklch(44.3% 0.11 240.79) 55%, oklch(21% 0.006 286));
+    --color-sky-300: oklch(50% 0.134 242.749);
+    --color-sky-400: oklch(68.5% 0.169 237.323);
+    --color-sky-500: oklch(68.5% 0.169 237.323);
+    --color-sky-600: oklch(74.6% 0.16 232.661);
+    --color-sky-700: oklch(82.8% 0.111 230.318);
+    --color-sky-800: oklch(90.1% 0.058 230.902);
+    --color-sky-900: oklch(95.1% 0.026 236.824);
+    --color-sky-950: oklch(97.7% 0.013 236.62);
+  }
+  dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+  /* Navigation chrome (sidebar, site header, sign-in panel) is already dark:
+   * it keeps its original colors in both modes. */
+  .theme-fixed {
+    --color-zinc-50: oklch(98.5% 0 none);
+    --color-zinc-100: oklch(96.7% 0.001 286.375);
+    --color-zinc-200: oklch(92% 0.004 286.32);
+    --color-zinc-300: oklch(87.1% 0.006 286.286);
+    --color-zinc-400: oklch(70.5% 0.015 286.067);
+    --color-zinc-500: oklch(55.2% 0.016 285.938);
+    --color-zinc-600: oklch(44.2% 0.017 285.786);
+    --color-zinc-700: oklch(37% 0.013 285.805);
+    --color-zinc-800: oklch(27.4% 0.006 286.033);
+    --color-zinc-900: oklch(21% 0.006 285.885);
+    --color-zinc-950: oklch(14.1% 0.005 285.823);
+    --color-brand-50: #f6f3fa;
+    --color-brand-100: #ece6f4;
+    --color-brand-200: #d8cce8;
+    --color-brand-300: #b9a5d5;
+    --color-brand-400: #9478bb;
+    --color-brand-500: #70539d;
+    --color-brand-600: #593f84;
+    --color-brand-700: #48326d;
+    --color-brand-800: #382756;
+    --color-brand-900: #2a1d41;
+    --color-brand-950: #1b122b;
+    --color-red-50: oklch(97.1% 0.013 17.38);
+    --color-red-100: oklch(93.6% 0.032 17.717);
+    --color-red-200: oklch(88.5% 0.062 18.334);
+    --color-red-300: oklch(80.8% 0.114 19.571);
+    --color-red-400: oklch(70.4% 0.191 22.216);
+    --color-red-500: oklch(63.7% 0.237 25.331);
+    --color-red-600: oklch(57.7% 0.245 27.325);
+    --color-red-700: oklch(50.5% 0.213 27.518);
+    --color-red-800: oklch(44.4% 0.177 26.899);
+    --color-red-900: oklch(39.6% 0.141 25.723);
+    --color-red-950: oklch(25.8% 0.092 26.042);
+    --color-amber-50: oklch(98.7% 0.022 95.277);
+    --color-amber-100: oklch(96.2% 0.059 95.617);
+    --color-amber-200: oklch(92.4% 0.12 95.746);
+    --color-amber-300: oklch(87.9% 0.169 91.605);
+    --color-amber-400: oklch(82.8% 0.189 84.429);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-600: oklch(66.6% 0.179 58.318);
+    --color-amber-700: oklch(55.5% 0.163 48.998);
+    --color-amber-800: oklch(47.3% 0.137 46.201);
+    --color-amber-900: oklch(41.4% 0.112 45.904);
+    --color-amber-950: oklch(27.9% 0.077 45.635);
+    --color-emerald-50: oklch(97.9% 0.021 166.113);
+    --color-emerald-100: oklch(95% 0.052 163.051);
+    --color-emerald-200: oklch(90.5% 0.093 164.15);
+    --color-emerald-300: oklch(84.5% 0.143 164.978);
+    --color-emerald-400: oklch(76.5% 0.177 163.223);
+    --color-emerald-500: oklch(69.6% 0.17 162.48);
+    --color-emerald-600: oklch(59.6% 0.145 163.225);
+    --color-emerald-700: oklch(50.8% 0.118 165.612);
+    --color-emerald-800: oklch(43.2% 0.095 166.913);
+    --color-emerald-900: oklch(37.8% 0.077 168.94);
+    --color-emerald-950: oklch(26.2% 0.051 172.552);
+    --color-sky-50: oklch(97.7% 0.013 236.62);
+    --color-sky-100: oklch(95.1% 0.026 236.824);
+    --color-sky-200: oklch(90.1% 0.058 230.902);
+    --color-sky-300: oklch(82.8% 0.111 230.318);
+    --color-sky-400: oklch(74.6% 0.16 232.661);
+    --color-sky-500: oklch(68.5% 0.169 237.323);
+    --color-sky-600: oklch(58.8% 0.158 241.966);
+    --color-sky-700: oklch(50% 0.134 242.749);
+    --color-sky-800: oklch(44.3% 0.11 240.79);
+    --color-sky-900: oklch(39.1% 0.09 240.876);
+    --color-sky-950: oklch(29.3% 0.066 243.157);
+  }
+}
+
+/* Menus open with a short grow-in, like a lifted iPhone context menu. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

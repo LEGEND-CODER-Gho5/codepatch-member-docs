@@ -16,12 +16,12 @@ export function buttonStyles({
     size === "sm" && "h-8 px-2.5 text-[13px] [&_svg]:size-4",
     size === "md" && "h-9 px-3.5 text-[13.5px] [&_svg]:size-4",
     variant === "primary" &&
-      "bg-brand-700 text-white shadow-[0_1px_2px_rgba(27,18,43,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-brand-800 active:bg-brand-900",
+      "bg-accent text-white shadow-[0_1px_2px_rgba(27,18,43,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-accent-hover active:bg-accent-active",
     variant === "secondary" &&
-      "border border-zinc-300 bg-white text-zinc-800 shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:border-zinc-400 hover:bg-zinc-50 active:bg-zinc-100",
+      "border border-zinc-300 bg-surface text-zinc-800 shadow-[0_1px_1px_rgba(0,0,0,0.04)] hover:border-zinc-400 hover:bg-zinc-50 active:bg-zinc-100",
     variant === "ghost" && "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900",
-    variant === "danger" && "bg-red-700 text-white shadow-[0_1px_2px_rgba(80,10,10,0.25)] hover:bg-red-800",
-    variant === "danger-outline" && "border border-red-200 bg-white text-red-700 hover:border-red-300 hover:bg-red-50",
+    variant === "danger" && "bg-danger text-white shadow-[0_1px_2px_rgba(80,10,10,0.25)] hover:bg-danger-hover",
+    variant === "danger-outline" && "border border-red-200 bg-surface text-red-700 hover:border-red-300 hover:bg-red-50",
     variant === "dark" && "border border-white/10 bg-white/5 text-zinc-200 hover:bg-white/10 hover:text-white",
     className,
   );

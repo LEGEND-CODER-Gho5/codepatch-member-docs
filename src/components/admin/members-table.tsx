@@ -4,7 +4,8 @@ import { FileText, KeyRound, Pencil, Search, Trash, UserCheck, UserRound, Users,
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Select } from "@/components/ui/field";
-import { Menu } from "@/components/ui/menu";
+import { useActionMenu } from "@/components/ui/gestures";
+import { Menu, type MenuItem } from "@/components/ui/menu";
 import { Avatar, EmptyState, StatusBadge, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDateShort, formatHours, formatPlainDate } from "@/lib/format";
@@ -62,7 +63,7 @@ export function MembersTable({
   const filtering = Boolean(query || department || position || status);
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+    <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
       <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-3">
         <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
@@ -72,7 +73,7 @@ export function MembersTable({
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search name, ID, or email"
             aria-label="Search members"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Filter by department" className="w-44">
@@ -143,85 +144,94 @@ export function MembersTable({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((member) => {
-                const target = { id: member.id, fullName: member.fullName };
-                return (
-                  <tr key={member.id} className={cn(tableStyles.row, member.status === "inactive" && "text-zinc-500")}>
-                    <td className={tableStyles.td}>
-                      <Link href={`/admin/members/${member.id}`} className="group flex items-center gap-3">
-                        <Avatar name={member.fullName} />
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-zinc-900 group-hover:text-brand-800 group-hover:underline">
-                            {member.fullName}
-                          </span>
-                          <span className="block truncate text-[12px] text-zinc-500">
-                            <span className="font-mono">{member.memberCode}</span>
-                            {member.email && <> · {member.email}</>}
-                          </span>
-                        </span>
-                      </Link>
-                    </td>
-                    <td className={cn(tableStyles.td, "whitespace-nowrap")}>
-                      {member.departmentName}
-                      {member.otherDepartments.length > 0 && (
-                        <span className="block text-[12px] text-zinc-500">
-                          also {member.otherDepartments.map((other) => other.name).join(", ")}
-                        </span>
-                      )}
-                    </td>
-                    <td className={cn(tableStyles.td, "whitespace-nowrap")}>{member.positionName}</td>
-                    <td className={tableStyles.td}>
-                      <StatusBadge status={member.status} />
-                    </td>
-                    <td className={cn(tableStyles.td, "tabular text-right")}>{formatHours(member.hoursTotal)}</td>
-                    <td className={cn(tableStyles.td, "tabular text-right")}>{member.contributionCount}</td>
-                    <td className={cn(tableStyles.td, "whitespace-nowrap text-zinc-600")}>
-                      {member.startDate ? formatPlainDate(member.startDate, "short") : "—"}
-                    </td>
-                    <td className={cn(tableStyles.td, "whitespace-nowrap text-zinc-600")}>
-                      {member.lastActivityAt ? formatDateShort(member.lastActivityAt) : "—"}
-                    </td>
-                    <td className={cn(tableStyles.td, "py-1 text-right")}>
-                      <Menu
-                        label={`Actions for ${member.fullName}`}
-                        items={[
-                          { label: "View profile", icon: <UserRound />, href: `/admin/members/${member.id}` },
-                          { label: "Open documentation", icon: <FileText />, href: `/admin/documentation/${member.id}` },
-                          "separator",
-                          {
-                            label: "Edit member",
-                            icon: <Pencil />,
-                            onSelect: () =>
-                              actions.edit({
-                                id: member.id,
-                                fullName: member.fullName,
-                                departmentId: member.departmentId,
-                                otherDepartmentIds: member.otherDepartments.map((other) => other.id),
-                                positionId: member.positionId,
-                                status: member.status,
-                                email: member.email,
-                                startDate: member.startDate,
-                              }),
-                          },
-                          { label: "Reset password", icon: <KeyRound />, onSelect: () => actions.resetPassword(target) },
-                          {
-                            label: member.status === "active" ? "Deactivate" : "Reactivate",
-                            icon: member.status === "active" ? <UserX /> : <UserCheck />,
-                            onSelect: () => actions.toggleStatus({ ...target, status: member.status }),
-                          },
-                          "separator",
-                          { label: "Delete member", icon: <Trash />, tone: "danger", onSelect: () => actions.remove(target) },
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((member) => (
+                <MemberTableRowView key={member.id} member={member} actions={actions} />
+              ))}
             </tbody>
           </table>
         </div>
       )}
       {actions.dialogs}
     </div>
+  );
+}
+
+type RowActions = ReturnType<typeof useMemberActions>;
+
+/** One member: "⋯" menu, plus the same actions on long press (phones) or right-click (computers). */
+function MemberTableRowView({ member, actions }: { member: MemberTableRow; actions: RowActions }) {
+  const target = { id: member.id, fullName: member.fullName };
+  const items: MenuItem[] = [
+    { label: "View profile", icon: <UserRound />, href: `/admin/members/${member.id}` },
+    { label: "Open documentation", icon: <FileText />, href: `/admin/documentation/${member.id}` },
+    "separator",
+    {
+      label: "Edit member",
+      icon: <Pencil />,
+      onSelect: () =>
+        actions.edit({
+          id: member.id,
+          fullName: member.fullName,
+          departmentId: member.departmentId,
+          otherDepartmentIds: member.otherDepartments.map((other) => other.id),
+          positionId: member.positionId,
+          status: member.status,
+          email: member.email,
+          startDate: member.startDate,
+        }),
+    },
+    { label: "Reset password", icon: <KeyRound />, onSelect: () => actions.resetPassword(target) },
+    {
+      label: member.status === "active" ? "Deactivate" : "Reactivate",
+      icon: member.status === "active" ? <UserX /> : <UserCheck />,
+      onSelect: () => actions.toggleStatus({ ...target, status: member.status }),
+    },
+    "separator",
+    { label: "Delete member", icon: <Trash />, tone: "danger", onSelect: () => actions.remove(target) },
+  ];
+  const menu = useActionMenu(items, `Actions for ${member.fullName}`);
+  return (
+    <>
+      <tr {...menu.handlers} className={cn(tableStyles.row, member.status === "inactive" && "text-zinc-500", menu.liftClass)}>
+        <td className={tableStyles.td}>
+          <Link href={`/admin/members/${member.id}`} className="group flex items-center gap-3">
+            <Avatar name={member.fullName} />
+            <span className="min-w-0">
+              <span className="block truncate font-medium text-zinc-900 group-hover:text-brand-800 group-hover:underline">
+                {member.fullName}
+              </span>
+              <span className="block truncate text-[12px] text-zinc-500">
+                <span className="font-mono">{member.memberCode}</span>
+                {member.email && <> · {member.email}</>}
+              </span>
+            </span>
+          </Link>
+        </td>
+        <td className={cn(tableStyles.td, "whitespace-nowrap")}>
+          {member.departmentName}
+          {member.otherDepartments.length > 0 && (
+            <span className="block text-[12px] text-zinc-500">
+              also {member.otherDepartments.map((other) => other.name).join(", ")}
+            </span>
+          )}
+        </td>
+        <td className={cn(tableStyles.td, "whitespace-nowrap")}>{member.positionName}</td>
+        <td className={tableStyles.td}>
+          <StatusBadge status={member.status} />
+        </td>
+        <td className={cn(tableStyles.td, "tabular text-right")}>{formatHours(member.hoursTotal)}</td>
+        <td className={cn(tableStyles.td, "tabular text-right")}>{member.contributionCount}</td>
+        <td className={cn(tableStyles.td, "whitespace-nowrap text-zinc-600")}>
+          {member.startDate ? formatPlainDate(member.startDate, "short") : "—"}
+        </td>
+        <td className={cn(tableStyles.td, "whitespace-nowrap text-zinc-600")}>
+          {member.lastActivityAt ? formatDateShort(member.lastActivityAt) : "—"}
+        </td>
+        <td className={cn(tableStyles.td, "py-1 text-right")}>
+          <Menu label={`Actions for ${member.fullName}`} items={items} />
+        </td>
+      </tr>
+      {menu.menu}
+    </>
   );
 }

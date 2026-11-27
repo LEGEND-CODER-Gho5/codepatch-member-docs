@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, CheckCheck, FileClock, FileText, KeyRound, ShieldAlert, UserPlus } from "lucide-react";
+import { ArrowUpRight, Bell, CheckCheck, FileClock, FileText, KeyRound, MailOpen, ShieldAlert, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { markAllNotificationsReadAction, markNotificationReadAction, markNotificationUnreadAction } from "@/actions/organization";
 import { Button } from "@/components/ui/button";
+import { GestureRow } from "@/components/ui/gestures";
 import { EmptyState } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
@@ -35,7 +36,7 @@ export function NotificationsList({ items, unread, filter }: { items: Notificati
   }
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+    <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 px-4 py-2.5">
         <nav className="flex gap-1" aria-label="Filter notifications">
           {(["all", "unread"] as const).map((key) => (
@@ -75,52 +76,75 @@ export function NotificationsList({ items, unread, filter }: { items: Notificati
       ) : (
         <ul className="divide-y divide-zinc-100">
           {items.map((item) => (
-            <li key={item.id} className={cn("flex gap-3 px-4 py-3.5", !item.readAt && "bg-brand-50/35")}>
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-zinc-200">
-                {iconFor(item.type)}
-              </span>
-              <div className="min-w-0 flex-1">
-                <button type="button" onClick={() => open(item)} className="text-left">
-                  <span className={cn("text-[13.5px] leading-snug hover:underline", item.readAt ? "text-zinc-700" : "font-medium text-zinc-950")}>
-                    {item.description}
-                  </span>
-                </button>
-                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-zinc-500">
-                  <span>{formatDateTime(item.updatedAt)}</span>
-                  {item.memberName && (
-                    <>
-                      <span className="text-zinc-300">·</span>
-                      <span>{item.memberName}</span>
-                    </>
-                  )}
-                  {item.departmentName && (
-                    <>
-                      <span className="text-zinc-300">·</span>
-                      <span>{item.departmentName}</span>
-                    </>
-                  )}
-                  {item.auditLogId && (
-                    <>
-                      <span className="text-zinc-300">·</span>
-                      <Link href={`/admin/history/${item.auditLogId}`} className="inline-flex items-center gap-1 font-medium text-brand-700 hover:text-brand-900">
-                        <FileClock className="size-3" />
-                        View change
-                      </Link>
-                    </>
-                  )}
-                </p>
+            // Phones: swipe left to mark read/unread; long press (or right-click) for every action.
+            <GestureRow
+              as="li"
+              key={item.id}
+              menuLabel="Notification actions"
+              swipeActions={[
+                {
+                  label: item.readAt ? "Unread" : "Read",
+                  icon: item.readAt ? <MailOpen /> : <CheckCheck />,
+                  onSelect: () => void toggle(item),
+                },
+              ]}
+              menuItems={[
+                { label: "Open", icon: <ArrowUpRight />, onSelect: () => void open(item) },
+                item.readAt
+                  ? { label: "Mark unread", icon: <MailOpen />, onSelect: () => void toggle(item) }
+                  : { label: "Mark read", icon: <CheckCheck />, onSelect: () => void toggle(item) },
+                ...(item.auditLogId
+                  ? [{ label: "View change", icon: <FileClock />, href: `/admin/history/${item.auditLogId}` }]
+                  : []),
+              ]}
+            >
+              <div className={cn("flex gap-3 px-4 py-3.5", !item.readAt && "bg-brand-50/35")}>
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-surface ring-1 ring-zinc-200">
+                  {iconFor(item.type)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => open(item)} className="text-left">
+                    <span className={cn("text-[13.5px] leading-snug hover:underline", item.readAt ? "text-zinc-700" : "font-medium text-zinc-950")}>
+                      {item.description}
+                    </span>
+                  </button>
+                  <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] text-zinc-500">
+                    <span>{formatDateTime(item.updatedAt)}</span>
+                    {item.memberName && (
+                      <>
+                        <span className="text-zinc-300">·</span>
+                        <span>{item.memberName}</span>
+                      </>
+                    )}
+                    {item.departmentName && (
+                      <>
+                        <span className="text-zinc-300">·</span>
+                        <span>{item.departmentName}</span>
+                      </>
+                    )}
+                    {item.auditLogId && (
+                      <>
+                        <span className="text-zinc-300">·</span>
+                        <Link href={`/admin/history/${item.auditLogId}`} className="inline-flex items-center gap-1 font-medium text-brand-700 hover:text-brand-900">
+                          <FileClock className="size-3" />
+                          View change
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-start gap-2">
+                  {!item.readAt && <span className="mt-2 size-2 rounded-full bg-brand-600" aria-label="Unread" />}
+                  <button
+                    type="button"
+                    onClick={() => toggle(item)}
+                    className="rounded px-1.5 py-1 text-[12px] font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+                  >
+                    {item.readAt ? "Mark unread" : "Mark read"}
+                  </button>
+                </div>
               </div>
-              <div className="flex shrink-0 items-start gap-2">
-                {!item.readAt && <span className="mt-2 size-2 rounded-full bg-brand-600" aria-label="Unread" />}
-                <button
-                  type="button"
-                  onClick={() => toggle(item)}
-                  className="rounded px-1.5 py-1 text-[12px] font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-                >
-                  {item.readAt ? "Mark unread" : "Mark read"}
-                </button>
-              </div>
-            </li>
+            </GestureRow>
           ))}
         </ul>
       )}

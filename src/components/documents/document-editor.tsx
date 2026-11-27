@@ -428,7 +428,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
       )}
 
       {/* ----------------------------- Interactive sheet ----------------------------- */}
-      <article className="rounded-md border border-zinc-200 bg-white px-5 py-8 shadow-sheet sm:px-12 sm:py-12 print:hidden">
+      <article className="rounded-md border border-zinc-200 bg-surface px-5 py-8 shadow-sheet sm:px-12 sm:py-12 print:hidden">
         {kind === "contribution" ? (
           <>
             <header>
@@ -470,7 +470,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                     <li
                       key={row.key}
                       className={cn(
-                        "group/entry rounded-md border bg-white transition-colors focus-within:border-brand-300 focus-within:shadow-[0_0_0_3px_rgba(112,83,157,0.08)]",
+                        "group/entry rounded-md border bg-surface transition-colors focus-within:border-brand-300 focus-within:shadow-[0_0_0_3px_rgba(112,83,157,0.08)]",
                         row.error ? "border-red-300" : "border-zinc-200 hover:border-zinc-300",
                       )}
                     >
@@ -481,7 +481,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                           value={row.values.entry_date}
                           onChange={(event) => setRowField(row.key, "entry_date", event.target.value)}
                           aria-label={`Date of contribution ${index + 1}`}
-                          className="h-8 rounded border border-zinc-200 bg-white px-2 text-[13px] text-zinc-800 focus:border-brand-500 focus:outline-none"
+                          className="h-8 rounded border border-zinc-200 bg-surface px-2 text-[13px] text-zinc-800 focus:border-brand-500 focus:outline-none"
                           {...focusProps(`r:${row.key}:entry_date`)}
                         />
                         <input
@@ -703,7 +703,7 @@ const lineInputClass =
   "w-full border-0 border-b border-zinc-400 bg-transparent px-1 pt-0.5 pb-1 text-[14px] text-zinc-900 placeholder:text-zinc-400 transition-colors hover:border-zinc-600 focus:border-brand-600 focus:bg-brand-50/50 focus:outline-none";
 
 const cellInputClass =
-  "block w-full rounded border border-transparent bg-transparent px-2 py-1.5 text-[13.5px] text-zinc-900 placeholder:text-zinc-400 transition-colors hover:border-zinc-200 focus:border-brand-500 focus:bg-white focus:outline-none";
+  "block w-full rounded border border-transparent bg-transparent px-2 py-1.5 text-[13.5px] text-zinc-900 placeholder:text-zinc-400 transition-colors hover:border-zinc-200 focus:border-brand-500 focus:bg-surface focus:outline-none";
 
 function LineField({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -840,7 +840,7 @@ function EditorToolbar({
   actingAs: ActingAs;
 }) {
   return (
-    <div className="z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 bg-white/95 px-3 py-2 shadow-panel backdrop-blur lg:sticky lg:top-[68px] print:hidden">
+    <div className="z-20 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-zinc-200 bg-surface/95 px-3 py-2 shadow-panel backdrop-blur lg:sticky lg:top-[68px] print:hidden">
       <div className="flex min-w-0 items-center gap-2 text-[12.5px]" aria-live="polite">
         {state.state === "saving" && (
           <span className="flex items-center gap-1.5 text-zinc-600">

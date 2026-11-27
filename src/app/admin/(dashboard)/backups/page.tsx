@@ -94,7 +94,7 @@ export default async function BackupsPage() {
 
         <Panel title="Download a copy" description="Made fresh from the live data when you press the button. Downloads are recorded in Edit History.">
           <div className="grid gap-px bg-zinc-200 md:grid-cols-2">
-            <div className="flex flex-col gap-3 bg-white p-4">
+            <div className="flex flex-col gap-3 bg-surface p-4">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900">
                 <FileSpreadsheet className="size-4 text-emerald-700" aria-hidden />
                 Spreadsheet
@@ -110,7 +110,7 @@ export default async function BackupsPage() {
                 </a>
               </div>
             </div>
-            <div className="flex flex-col gap-3 bg-white p-4">
+            <div className="flex flex-col gap-3 bg-surface p-4">
               <div className="flex items-center gap-2 text-[14px] font-semibold text-zinc-900">
                 <FileJson className="size-4 text-brand-700" aria-hidden />
                 Full backup

@@ -16,11 +16,16 @@ export default async function DirectoryPage() {
     <div className="min-h-dvh">
       <SiteHeader org={org} viewer={viewer} current="directory" live />
       <LiveRefresh scopes={["directory"]} />
-      <div className="border-b border-zinc-200 bg-white">
+      <div className="border-b border-zinc-200 bg-surface">
         <div className="mx-auto flex max-w-[1440px] flex-wrap items-end justify-between gap-6 px-4 py-6 sm:px-6">
           <div>
             <p className="text-[12px] font-medium text-zinc-500">{org.chapterName}</p>
-            <h1 className="mt-1 text-[22px] leading-tight font-semibold tracking-[-0.01em] text-zinc-950">Member Directory</h1>
+            <h1
+              data-large-title="Member Directory"
+              className="mt-1 text-[28px] leading-tight font-bold tracking-[-0.015em] text-zinc-950 sm:text-[22px] sm:font-semibold sm:tracking-[-0.01em]"
+            >
+              Member Directory
+            </h1>
             <p className="mt-1 max-w-xl text-[13.5px] text-zinc-600">
               Select your name to open your documentation. You will be asked for your personal password.
             </p>

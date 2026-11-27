@@ -70,11 +70,11 @@ export function NotificationBell({ unread, notifications }: { unread: number; no
         onClick={() => setOpen((value) => !value)}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
         aria-expanded={open}
-        className="relative inline-flex size-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:border-zinc-300 hover:text-zinc-900 aria-expanded:bg-zinc-50"
+        className="relative inline-flex size-9 items-center justify-center rounded-md border border-zinc-200 bg-surface text-zinc-600 transition-colors hover:border-zinc-300 hover:text-zinc-900 aria-expanded:bg-zinc-50"
       >
         <Bell className="size-[18px]" />
         {unread > 0 && (
-          <span className="tabular absolute -top-1.5 -right-1.5 min-w-[18px] rounded-full bg-brand-700 px-1 text-center text-[10.5px] leading-[18px] font-semibold text-white ring-2 ring-white">
+          <span className="tabular absolute -top-1.5 -right-1.5 min-w-[18px] rounded-full bg-accent px-1 text-center text-[10.5px] leading-[18px] font-semibold text-white ring-2 ring-surface">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -82,7 +82,7 @@ export function NotificationBell({ unread, notifications }: { unread: number; no
       {open && (
         <div
           ref={panelRef}
-          className="absolute top-11 right-0 z-50 w-[min(400px,calc(100vw-2rem))] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-raised"
+          className="absolute top-11 right-0 z-50 w-[min(400px,calc(100vw-2rem))] overflow-hidden rounded-lg border border-zinc-200 bg-surface shadow-raised"
         >
           <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5">
             <p className="text-[13px] font-semibold text-zinc-900">

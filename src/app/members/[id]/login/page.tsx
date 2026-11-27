@@ -33,7 +33,7 @@ export default async function MemberLoginPage({ params }: { params: Promise<{ id
             <ArrowLeft className="size-4" />
             Back to directory
           </Link>
-          <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+          <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
             <div className="flex items-center gap-3 border-b border-zinc-200 px-6 py-5">
               <Avatar name={member.fullName} className="size-10 text-[13px]" />
               <div className="min-w-0">

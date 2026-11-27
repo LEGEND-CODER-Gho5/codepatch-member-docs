@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, FileText, Search } from "lucide-react";
+import { ArrowRight, Clock, FileText, Search, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Select } from "@/components/ui/field";
+import { useActionMenu } from "@/components/ui/gestures";
 import { EmptyState, StatusBadge, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDateShort, formatHours } from "@/lib/format";
@@ -47,7 +48,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
   const showHours = type !== "member_documentation";
 
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+    <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
       <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-4 py-3">
         <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
@@ -57,7 +58,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search for a member"
             aria-label="Search for a member"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-3 pl-9 text-[13.5px] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none"
           />
         </div>
         <Select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Filter by department" className="w-44">
@@ -96,7 +97,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
             </thead>
             <tbody>
               {filtered.map((row) => (
-                <tr key={row.memberId} className={tableStyles.row}>
+                <OverviewRow key={row.memberId} row={row}>
                   <td className={tableStyles.td}>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-900">{row.fullName}</span>
@@ -130,7 +131,7 @@ export function DocumentationOverview({ rows, departments }: { rows: Documentati
                       />
                     </td>
                   )}
-                </tr>
+                </OverviewRow>
               ))}
             </tbody>
           </table>
@@ -152,5 +153,26 @@ function DocCell({ href, primary, secondary }: { href: string; primary: string; 
         <ArrowRight className="size-3.5" />
       </span>
     </Link>
+  );
+}
+
+/** A member's row; long press (phones) or right-click (computers) opens shortcuts to their records. */
+function OverviewRow({ row, children }: { row: DocumentationRow; children: ReactNode }) {
+  const menu = useActionMenu(
+    [
+      { label: "Member Documentation", icon: <FileText />, href: `/admin/documentation/${row.memberId}?type=member_documentation` },
+      { label: "Volunteer Hours Record", icon: <Clock />, href: `/admin/documentation/${row.memberId}?type=volunteer_hours_record` },
+      "separator",
+      { label: "Member profile", icon: <UserRound />, href: `/admin/members/${row.memberId}` },
+    ],
+    `Records of ${row.fullName}`,
+  );
+  return (
+    <>
+      <tr {...menu.handlers} className={cn(tableStyles.row, menu.liftClass)}>
+        {children}
+      </tr>
+      {menu.menu}
+    </>
   );
 }

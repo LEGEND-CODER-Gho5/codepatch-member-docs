@@ -42,7 +42,7 @@ export function DirectoryBoard({ departments, currentMemberId }: { departments: 
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Find a member by name or role"
             aria-label="Find a member"
-            className="h-9 w-full rounded-md border border-zinc-300 bg-white pr-8 pl-9 text-[13.5px] shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+            className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-8 pl-9 text-[13.5px] shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -63,7 +63,7 @@ export function DirectoryBoard({ departments, currentMemberId }: { departments: 
       </div>
 
       {departments.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-6 py-12 text-center text-[13.5px] text-zinc-500">
+        <div className="rounded-lg border border-dashed border-zinc-300 bg-surface px-6 py-12 text-center text-[13.5px] text-zinc-500">
           No departments have been configured yet.
         </div>
       ) : (
@@ -73,7 +73,7 @@ export function DirectoryBoard({ departments, currentMemberId }: { departments: 
               key={department.id}
               aria-labelledby={`dept-${department.id}`}
               className={cn(
-                "flex flex-col rounded-lg border border-zinc-200 bg-white shadow-panel",
+                "flex flex-col rounded-lg border border-zinc-200 bg-surface shadow-panel",
                 needle && department.visible.length === 0 && "opacity-60",
               )}
             >

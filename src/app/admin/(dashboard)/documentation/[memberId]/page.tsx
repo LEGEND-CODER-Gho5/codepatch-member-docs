@@ -42,6 +42,7 @@ export default async function AdminMemberDocumentationPage({
       </Link>
       <div className="print:hidden">
         <PageHeader
+          compactTitle={member.fullName}
           title={
             <span className="flex flex-wrap items-center gap-3">
               <Avatar name={member.fullName} className="size-10 text-[13px]" />

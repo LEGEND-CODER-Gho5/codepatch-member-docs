@@ -58,7 +58,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
         title="Edit History"
         description="An append-only record of every change: who made it, when, and exactly what changed. Records cannot be edited or deleted, and remain after a member is removed."
       />
-      <div className="rounded-lg border border-zinc-200 bg-white shadow-panel">
+      <div className="rounded-lg border border-zinc-200 bg-surface shadow-panel">
         <HistoryFilters departments={departments.map((department) => ({ id: department.id, name: department.name }))} total={result.total} />
         {result.items.length === 0 ? (
           <EmptyState icon={<FileClock />} title="No history records match" description="Try widening the filters or clearing the date range." />
