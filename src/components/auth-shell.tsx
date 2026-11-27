@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand";
-import { AutumnGarland } from "@/components/season/autumn-art";
+import { SeasonGarland } from "@/components/season/season-garland";
 import { currentSeason } from "@/lib/season";
 import { cn } from "@/lib/cn";
 import type { OrgInfo } from "@/lib/types";
@@ -53,9 +53,9 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
           </ol>
         </div>
         {season && (
-          <div className="autumn-on-dark -mx-4">
-            <p className="mb-2 px-4 font-serif text-[17px] text-zinc-300">Happy Thanksgiving</p>
-            <AutumnGarland className="h-auto w-full max-w-[420px]" />
+          <div className={cn("-mx-4", season.id === "winter" ? "winter-on-dark" : "autumn-on-dark")}>
+            <p className="mb-2 px-4 font-serif text-[17px] text-zinc-300">{season.title}</p>
+            <SeasonGarland id={season.id} className="h-auto w-full max-w-[420px]" />
           </div>
         )}
         <p className="text-[12px] text-zinc-600">Restricted to authorized members of {org.organizationName}.</p>

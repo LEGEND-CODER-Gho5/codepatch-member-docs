@@ -434,3 +434,37 @@
     transform: none;
   }
 }
+
+/* --------------------------- Winter holidays ----------------------------
+ * Seasonal decoration only (src/lib/season.ts: December). Same structure as
+ * the autumn palette: dark surfaces (dark mode and the always-dark sign-in
+ * panel, .winter-on-dark) get their own, lighter steps. */
+:root {
+  --winter-pine: #2c6650;
+  --winter-pine-light: #4d8c6c;
+  --winter-frost: #6b98bd;
+  --winter-berry: #b4233f;
+  --winter-cone: #8a6142;
+  --winter-cone-light: #c39a72;
+  --winter-stem: #5b4636;
+}
+.winter-on-dark {
+  --winter-pine: #4f9a7a;
+  --winter-pine-light: #79bb98;
+  --winter-frost: #bcd8ee;
+  --winter-berry: #e0476a;
+  --winter-cone: #b7865e;
+  --winter-cone-light: #e0b48a;
+  --winter-stem: #957a62;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --winter-pine: #4f9a7a;
+    --winter-pine-light: #79bb98;
+    --winter-frost: #bcd8ee;
+    --winter-berry: #e0476a;
+    --winter-cone: #b7865e;
+    --winter-cone-light: #e0b48a;
+    --winter-stem: #957a62;
+  }
+}
