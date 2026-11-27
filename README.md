@@ -4,6 +4,9 @@ A database-backed web application for the **Code Patch STEM — South Brunswick 
 **Member Documentation** and **Member — Volunteer Hours Record** (both reproduced from the chapter's official PDF) in one place;
 the chapter administrator manages members, every document, an append-only edit history, and real-time notifications.
 
+**Open the site: [codepatch-member-docs.vercel.app](https://codepatch-member-docs.vercel.app)** (chapter members sign in with
+the shared password).
+
 ## Quick start (local)
 
 Requirements: Node.js 22.18 or later (developed on Node 26). The database scripts load TypeScript files directly, which needs
