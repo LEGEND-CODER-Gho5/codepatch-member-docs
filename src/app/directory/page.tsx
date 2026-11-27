@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DirectoryBoard } from "@/components/directory-board";
 import { LiveRefresh } from "@/components/realtime";
+import { SeasonBanner } from "@/components/season/season-banner";
 import { SiteHeader } from "@/components/site-header";
 import { requireSiteAccess } from "@/lib/server/auth";
 import { formatHours } from "@/lib/format";
@@ -48,6 +49,13 @@ export default async function DirectoryPage() {
         </div>
       </div>
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6">
+        <SeasonBanner
+          message={
+            chapterHours > 0
+              ? `Thank you to every member. Together, the chapter has given ${formatHours(chapterHours)} hours of service.`
+              : "Thank you to every member for being part of the chapter."
+          }
+        />
         <DirectoryBoard departments={directory.departments} currentMemberId={viewer.member?.id ?? null} />
       </main>
     </div>

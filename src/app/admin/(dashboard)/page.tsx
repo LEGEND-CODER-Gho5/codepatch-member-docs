@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActivityList } from "@/components/admin/activity-list";
 import { HoursChart } from "@/components/admin/hours-chart";
+import { SeasonBanner } from "@/components/season/season-banner";
 import { CountUp } from "@/components/ui/count-up";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader, Panel, tableStyles } from "@/components/ui/primitives";
@@ -76,6 +77,13 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
+      <SeasonBanner
+        message={
+          stats.totalHours > 0
+            ? `Together, members have given ${formatHours(stats.totalHours)} hours of service. Thank you for leading the chapter.`
+            : "Thank you for leading the chapter, and to every member for their service."
+        }
+      />
       <p className="mb-1.5 text-[13px] text-zinc-500">{formatWeekdayDate()}</p>
       <PageHeader
         display

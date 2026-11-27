@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/brand";
+import { AutumnGarland } from "@/components/season/autumn-art";
+import { currentSeason } from "@/lib/season";
 import { cn } from "@/lib/cn";
 import type { OrgInfo } from "@/lib/types";
 
@@ -18,6 +20,7 @@ const STEPS = [
 ];
 
 export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 | 3; children: ReactNode }) {
+  const season = currentSeason();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(400px,40%)_1fr]">
       <aside className="theme-fixed hidden flex-col justify-between border-r border-black/40 bg-charcoal-950 px-12 py-10 lg:flex">
@@ -49,6 +52,12 @@ export function AuthShell({ org, step, children }: { org: OrgInfo; step: 1 | 2 |
             })}
           </ol>
         </div>
+        {season && (
+          <div className="autumn-on-dark -mx-4">
+            <p className="mb-2 px-4 font-serif text-[17px] text-zinc-300">Happy Thanksgiving</p>
+            <AutumnGarland className="h-auto w-full max-w-[420px]" />
+          </div>
+        )}
         <p className="text-[12px] text-zinc-600">Restricted to authorized members of {org.organizationName}.</p>
       </aside>
       <main className="flex flex-col bg-zinc-50">

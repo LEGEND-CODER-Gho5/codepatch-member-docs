@@ -4,10 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { memberLogoutAction } from "@/actions/auth";
 import { DocumentWorkspace } from "@/components/documents/workspace";
 import { LiveRefresh } from "@/components/realtime";
+import { SeasonBanner } from "@/components/season/season-banner";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/primitives";
-import { formatDepartments, greeting } from "@/lib/format";
+import { formatDepartments, formatHours, greeting } from "@/lib/format";
 import { getViewer } from "@/lib/server/auth";
 import { getDocumentRecord, getWorkspaceMember, listDocumentSummaries } from "@/lib/server/queries";
 import { getOrgInfo } from "@/lib/server/settings";
@@ -44,6 +45,10 @@ export default async function MemberWorkspacePage({
   // Only documents that belong to this member can be selected.
   const selected = ofType.find((summary) => summary.id === query.doc) ?? ofType[0];
   const record = selected ? await getDocumentRecord(selected.id) : null;
+  const firstName = member.fullName.trim().split(/\s+/)[0];
+  const myHours = summaries
+    .filter((summary) => summary.documentType === "volunteer_hours_record")
+    .reduce((sum, summary) => sum + summary.hoursTotal, 0);
 
   return (
     <div className="min-h-dvh">
@@ -55,7 +60,7 @@ export default async function MemberWorkspacePage({
             <Avatar name={member.fullName} className="size-10 text-[13px]" />
             <div className="min-w-0">
               <h1 data-large-title={member.fullName} className="truncate font-serif text-[24px] leading-tight font-medium tracking-[-0.01em] text-zinc-950 sm:text-[26px]">
-                {greeting()}, {member.fullName.trim().split(/\s+/)[0]}
+                {greeting()}, {firstName}
               </h1>
               <p className="mt-0.5 truncate text-[12.5px] text-zinc-500">
                 {member.positionName} · {formatDepartments(member.departmentName, member.otherDepartmentNames)} · <span className="font-mono">{member.memberCode}</span>
@@ -71,6 +76,13 @@ export default async function MemberWorkspacePage({
         </div>
       </div>
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 print:max-w-none print:p-0">
+        <SeasonBanner
+          message={
+            myHours > 0
+              ? `Thank you, ${firstName}, for your ${formatHours(myHours)} hours of service to the chapter.`
+              : `Thank you, ${firstName}, for being part of the chapter.`
+          }
+        />
         <DocumentWorkspace
           mode="member"
           member={member}

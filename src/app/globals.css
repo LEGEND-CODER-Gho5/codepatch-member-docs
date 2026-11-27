@@ -378,3 +378,59 @@
   scrollbar-width: thin;
   scrollbar-color: var(--color-zinc-300) transparent;
 }
+
+/* ----------------------------- Thanksgiving -----------------------------
+ * Seasonal decoration only (src/lib/season.ts turns it on November 15-30).
+ * The palette has its own steps for dark surfaces: dark mode, and the
+ * always-dark sign-in panel (.autumn-on-dark). */
+:root {
+  --autumn-ember: #c2410c;
+  --autumn-amber: #d97706;
+  --autumn-gold: #ca8a04;
+  --autumn-cranberry: #9f1239;
+  --autumn-olive: #6b7a34;
+  --autumn-bark: #7c4a2d;
+  --autumn-bark-leaf: #9a5b34;
+  --autumn-acorn: #b98535;
+  --autumn-wheat: #c9a24a;
+  --autumn-wheat-stem: #a88435;
+  --autumn-vein: rgba(255, 255, 255, 0.4);
+}
+.autumn-on-dark {
+  --autumn-ember: #ea6a2a;
+  --autumn-amber: #f0a030;
+  --autumn-gold: #e2b235;
+  --autumn-cranberry: #d2335a;
+  --autumn-olive: #93a55c;
+  --autumn-bark: #a46e46;
+  --autumn-bark-leaf: #bd7d4e;
+  --autumn-acorn: #d29c4c;
+  --autumn-wheat: #dfbb64;
+  --autumn-wheat-stem: #c19c4e;
+  --autumn-vein: rgba(0, 0, 0, 0.22);
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --autumn-ember: #ea6a2a;
+    --autumn-amber: #f0a030;
+    --autumn-gold: #e2b235;
+    --autumn-cranberry: #d2335a;
+    --autumn-olive: #93a55c;
+    --autumn-bark: #a46e46;
+    --autumn-bark-leaf: #bd7d4e;
+    --autumn-acorn: #d29c4c;
+    --autumn-wheat: #dfbb64;
+    --autumn-wheat-stem: #c19c4e;
+    --autumn-vein: rgba(0, 0, 0, 0.22);
+  }
+}
+@keyframes leaf-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) rotate(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
