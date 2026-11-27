@@ -2,26 +2,31 @@ import { CircleAlert, FileClock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActivityList } from "@/components/admin/activity-list";
+import { HoursChart } from "@/components/admin/hours-chart";
+import { CountUp } from "@/components/ui/count-up";
 import { AddMemberTrigger } from "@/components/admin/admin-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeader, Panel, tableStyles } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
-import { formatCount, formatDateTime, formatHours } from "@/lib/format";
+import { formatCount, formatDateTime, formatHours, formatWeekdayDate, greeting } from "@/lib/format";
 import { requireAdminPage } from "@/lib/server/auth";
 import { backupStorageConfigured, getBackupStatus, isBackupStale } from "@/lib/server/backup-jobs";
-import { getOverviewStats, listDepartments, listNotifications, listRecentActivity } from "@/lib/server/queries";
+import { getMonthlyHours, getOverviewStats, listDepartments, listNotifications, listRecentActivity } from "@/lib/server/queries";
+import { getOrgInfo } from "@/lib/server/settings";
 
 export const metadata: Metadata = { title: "Overview" };
 
 export default async function AdminOverviewPage() {
   await requireAdminPage();
   const backupsConfigured = backupStorageConfigured();
-  const [stats, activity, notifications, departments, backupStatus] = await Promise.all([
+  const [stats, activity, notifications, departments, backupStatus, monthly, org] = await Promise.all([
     getOverviewStats(),
     listRecentActivity(10, { actorType: "member" }),
     listNotifications({ limit: 6 }),
     listDepartments(),
     backupsConfigured ? getBackupStatus() : Promise.resolve(null),
+    getMonthlyHours(12),
+    getOrgInfo(),
   ]);
   // Only once the first backup has run (or failed): a brand-new setup is not a problem yet.
   const backupWarning = backupsConfigured && backupStatus !== null && isBackupStale(backupStatus);
@@ -30,25 +35,29 @@ export default async function AdminOverviewPage() {
   const tiles = [
     {
       label: "Active members",
-      value: formatCount(stats.activeMembers),
+      value: stats.activeMembers,
+      kind: "count" as const,
       detail: `${formatCount(stats.inactiveMembers)} inactive`,
       href: "/admin/members",
     },
     {
       label: "Departments",
-      value: formatCount(stats.departments),
+      value: stats.departments,
+      kind: "count" as const,
       detail: largest && largest.activeMembers > 0 ? `Largest: ${largest.name} (${largest.activeMembers})` : "No members assigned yet",
       href: "/admin/departments",
     },
     {
       label: "Documentation entries",
-      value: formatCount(stats.contributionEntries + stats.hoursEntries),
+      value: stats.contributionEntries + stats.hoursEntries,
+      kind: "count" as const,
       detail: `${formatCount(stats.contributionEntries)} contribution${stats.contributionEntries === 1 ? "" : "s"} · ${formatCount(stats.hoursEntries)} hour log${stats.hoursEntries === 1 ? "" : "s"}`,
       href: "/admin/documentation?view=entries",
     },
     {
-      label: "Volunteer hours recorded",
-      value: formatHours(stats.totalHours),
+      label: "Volunteer hours",
+      value: stats.totalHours,
+      kind: "hours" as const,
       detail:
         stats.recordsToVerify > 0
           ? `${formatHours(stats.verifiedHours)} verified · ${formatCount(stats.recordsToVerify)} record${stats.recordsToVerify === 1 ? "" : "s"} to verify`
@@ -60,9 +69,9 @@ export default async function AdminOverviewPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Administration"
-        title="Overview"
-        description="Current figures from the chapter's records. Everything on this page updates automatically."
+        title={`${greeting()}, ${org.adminDisplayName}`}
+        compactTitle="Overview"
+        description={`${formatWeekdayDate()}. Everything on this page updates as members save their work.`}
         actions={
           <>
             <ButtonLink href="/admin/history">
@@ -90,25 +99,30 @@ export default async function AdminOverviewPage() {
         </Link>
       )}
 
-      <section aria-label="Statistics"className="grid overflow-hidden rounded-lg border border-zinc-200 bg-surface shadow-panel sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Statistics" className="grid grid-cols-2 overflow-hidden rounded-lg border border-zinc-200 bg-surface shadow-panel xl:grid-cols-4">
         {tiles.map((tile, index) => (
           <Link
             key={tile.label}
             href={tile.href}
             className={cn(
-              "group block border-zinc-200 px-5 py-4 transition-colors hover:bg-zinc-50/80",
-              index > 0 && "border-t sm:border-t-0",
-              index % 2 === 1 && "sm:border-l",
-              index >= 2 && "sm:border-t xl:border-t-0",
+              "group block min-w-0 border-zinc-200 px-4 py-4 transition-colors hover:bg-zinc-50/80 sm:px-5",
+              index % 2 === 1 && "border-l",
+              index >= 2 && "border-t xl:border-t-0",
               index === 2 && "xl:border-l",
             )}
           >
-            <p className="text-[11.5px] font-semibold tracking-[0.06em] text-zinc-500 uppercase">{tile.label}</p>
-            <p className="tabular mt-1.5 text-[28px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">{tile.value}</p>
+            <p className="truncate text-[12.5px] font-medium text-zinc-500">{tile.label}</p>
+            <p className="tabular mt-1.5 text-[28px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">
+              <CountUp value={tile.value} kind={tile.kind} />
+            </p>
             <p className="mt-2 truncate text-[12.5px] text-zinc-500">{tile.detail}</p>
           </Link>
         ))}
       </section>
+
+      <Panel title="Volunteer hours by month" description="By the month the work was done" className="mt-6">
+        <HoursChart data={monthly} />
+      </Panel>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Panel

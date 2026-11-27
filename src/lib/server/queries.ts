@@ -1,6 +1,6 @@
 import "server-only";
 import { sql, sqlOne } from "./db";
-import { addDays, memberCode, startOfDayInAppTimeZone } from "@/lib/format";
+import { addDays, memberCode, startOfDayInAppTimeZone, todayInAppTimeZone } from "@/lib/format";
 import { isUuid } from "@/lib/validation";
 import type {
   ActorType,
@@ -923,4 +923,45 @@ export async function getLiveMeeting(): Promise<MeetingRow | null> {
   const meetings = await sql<MeetingDbRow>(`SELECT ${MEETING_COLUMNS} FROM meetings WHERE status = 'in_progress' LIMIT 1`);
   const [meeting] = await withAttendees(meetings);
   return meeting ?? null;
+}
+
+/* ------------------------------ Hours by month ------------------------------ */
+
+export type MonthlyHours = { month: string; verified: number; awaiting: number };
+
+/**
+ * Volunteer hours per calendar month (America/New_York) for the last `months`
+ * months including this one, split into hours in verified records and hours
+ * still awaiting verification. Months without hours are included as zeros.
+ * An entry without a date counts in the month it was added.
+ */
+export async function getMonthlyHours(months = 12): Promise<MonthlyHours[]> {
+  const rows = await sql<{ month: string; verified: number; awaiting: number }>(
+    `WITH entries AS (
+       SELECT coalesce(h.service_date, (h.created_at AT TIME ZONE 'America/New_York')::date) AS day, h.hours, d.verified_at
+         FROM volunteer_hours h
+         JOIN member_documentation d ON d.id = h.document_id
+        WHERE h.hours IS NOT NULL
+     ), bounds AS (
+       SELECT date_trunc('month', now() AT TIME ZONE 'America/New_York')::date AS this_month
+     )
+     SELECT to_char(date_trunc('month', e.day), 'YYYY-MM') AS month,
+            coalesce(sum(e.hours) FILTER (WHERE e.verified_at IS NOT NULL), 0) AS verified,
+            coalesce(sum(e.hours) FILTER (WHERE e.verified_at IS NULL), 0) AS awaiting
+       FROM entries e, bounds b
+      WHERE e.day >= (b.this_month - make_interval(months => $1 - 1))::date
+        AND e.day < (b.this_month + interval '1 month')::date
+      GROUP BY 1
+      ORDER BY 1`,
+    [months],
+  );
+  const byMonth = new Map(rows.map((row) => [row.month, row]));
+  const [year, month] = todayInAppTimeZone().split("-").map(Number);
+  const result: MonthlyHours[] = [];
+  for (let back = months - 1; back >= 0; back--) {
+    const key = new Date(Date.UTC(year, month - 1 - back, 1)).toISOString().slice(0, 7);
+    const row = byMonth.get(key);
+    result.push({ month: key, verified: Number(row?.verified ?? 0), awaiting: Number(row?.awaiting ?? 0) });
+  }
+  return result;
 }

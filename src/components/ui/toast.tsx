@@ -47,7 +47,8 @@ export function Toaster() {
       {items.map((item) => (
         <div
           key={item.id}
-          className="pointer-events-auto flex items-start gap-2.5 rounded-lg border border-zinc-200 bg-surface px-3.5 py-3 shadow-raised"
+          data-motion
+          className="pointer-events-auto flex animate-[toast-in_240ms_cubic-bezier(0.2,0.8,0.2,1)] items-start gap-2.5 rounded-lg border border-zinc-200 bg-surface px-3.5 py-3 shadow-raised"
         >
           {item.kind === "success" && <CircleCheck className="mt-px size-4 shrink-0 text-emerald-600" />}
           {item.kind === "error" && <CircleExclamationPoint className="mt-px size-4 shrink-0 text-red-600" />}

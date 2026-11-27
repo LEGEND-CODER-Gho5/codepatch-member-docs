@@ -11,7 +11,7 @@ export function buttonStyles({
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}) {
   return cn(
-    "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-[background-color,border-color,color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+    "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98] motion-reduce:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
     size === "xs" && "h-7 px-2 text-[12px] [&_svg]:size-3.5",
     size === "sm" && "h-8 px-2.5 text-[13px] [&_svg]:size-4",
     size === "md" && "h-9 px-3.5 text-[13.5px] [&_svg]:size-4",

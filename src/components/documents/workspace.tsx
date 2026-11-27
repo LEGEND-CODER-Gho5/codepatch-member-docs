@@ -34,10 +34,52 @@ export function DocumentWorkspace({ mode, member, org, summaries, activeType, re
     { type: "volunteer_hours_record", meta: `${formatHours(hoursTotal)} hrs` },
   ];
   const label = DOCUMENT_TYPE_LABEL[activeType];
+  const verifiedHours = summaries
+    .filter((summary) => summary.documentType === "volunteer_hours_record" && summary.verification)
+    .reduce((sum, summary) => sum + summary.hoursTotal, 0);
+  const toVerify = summaries.filter((summary) => !summary.verification && summary.entryCount > 0).length;
+  const verifiedShare = hoursTotal > 0 ? Math.min(verifiedHours / hoursTotal, 1) : 0;
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
+        {/* At a glance: this member's hours and how much of it is verified. */}
+        <dl className="mb-5 grid grid-cols-2 overflow-hidden rounded-lg border border-zinc-200 bg-surface shadow-panel sm:grid-cols-4 print:hidden">
+          <div className="border-zinc-200 px-4 py-3">
+            <dt className="text-[12px] font-medium text-zinc-500">Volunteer hours</dt>
+            <dd className="tabular mt-1 text-[22px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">{formatHours(hoursTotal)}</dd>
+          </div>
+          <div className="border-l border-zinc-200 px-4 py-3">
+            <dt className="text-[12px] font-medium text-zinc-500">Verified</dt>
+            <dd className="mt-1">
+              <span className="tabular text-[22px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">{formatHours(verifiedHours)}</span>
+              <span className="ml-1 text-[12px] text-zinc-500">of {formatHours(hoursTotal)}</span>
+              <span
+                className="mt-2 block h-1 overflow-hidden rounded-full bg-brand-100"
+                role="meter"
+                aria-label="Share of hours verified"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(verifiedShare * 100)}
+              >
+                <span className="block h-full rounded-full bg-chart-verified transition-[width] duration-500" style={{ width: `${verifiedShare * 100}%` }} />
+              </span>
+            </dd>
+          </div>
+          <div className="border-t border-zinc-200 px-4 py-3 sm:border-t-0 sm:border-l">
+            <dt className="text-[12px] font-medium text-zinc-500">Contributions</dt>
+            <dd className="tabular mt-1 text-[22px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">{entryCount}</dd>
+          </div>
+          <div className="border-t border-l border-zinc-200 px-4 py-3 sm:border-t-0">
+            <dt className="text-[12px] font-medium text-zinc-500">Records</dt>
+            <dd className="mt-1">
+              <span className="tabular text-[22px] leading-none font-semibold tracking-[-0.02em] text-zinc-950">{summaries.length}</span>
+              <span className={cn("ml-1.5 text-[12px]", toVerify > 0 ? "text-amber-700" : "text-zinc-500")}>
+                {toVerify > 0 ? `${toVerify} awaiting verification` : summaries.some((summary) => summary.verification) ? "all verified" : ""}
+              </span>
+            </dd>
+          </div>
+        </dl>
         <nav
           aria-label="Documents"
           className="mb-4 flex gap-1 overflow-x-auto border-b border-zinc-200 [scrollbar-width:none] print:hidden [&::-webkit-scrollbar]:hidden"

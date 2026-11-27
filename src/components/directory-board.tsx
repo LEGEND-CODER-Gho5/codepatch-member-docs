@@ -2,7 +2,7 @@
 
 import { ChevronRight, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Badge } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 
@@ -11,6 +11,20 @@ type Department = { id: string; name: string; description: string; members: Memb
 
 export function DirectoryBoard({ departments, currentMemberId }: { departments: Department[]; currentMemberId?: string | null }) {
   const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  // Press "/" anywhere on the page to jump to the search box.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = target && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+      if (event.key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const needle = query.trim().toLowerCase();
 
   const filtered = useMemo(
@@ -37,13 +51,28 @@ export function DirectoryBoard({ departments, currentMemberId }: { departments: 
         <div className="relative w-full max-w-sm">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
           <input
+            ref={searchRef}
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setQuery("");
+                event.currentTarget.blur();
+              }
+            }}
             placeholder="Find a member by name or role"
             aria-label="Find a member"
             className="h-9 w-full rounded-md border border-zinc-300 bg-surface pr-8 pl-9 text-[13.5px] shadow-[inset_0_1px_1px_rgba(0,0,0,0.03)] placeholder:text-zinc-400 focus:border-brand-500 focus:ring-3 focus:ring-brand-500/15 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
+          {!query && (
+            <kbd
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 right-2 hidden -translate-y-1/2 rounded border border-zinc-200 bg-zinc-50 px-1.5 text-[11px] leading-[18px] font-medium text-zinc-400 sm:block"
+            >
+              /
+            </kbd>
+          )}
           {query && (
             <button
               type="button"

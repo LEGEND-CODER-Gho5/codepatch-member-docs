@@ -172,3 +172,19 @@ export function memberCode(memberNumber: number | string): string {
 export function formatDepartments(mainDepartment: string, otherDepartments: readonly string[] = []): string {
   return [mainDepartment, ...otherDepartments].join(", ");
 }
+
+const hourInZone = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, hour: "numeric", hourCycle: "h23" });
+const weekdayLong = new Intl.DateTimeFormat("en-US", { timeZone: APP_TIME_ZONE, weekday: "long", month: "long", day: "numeric" });
+
+/** "Good morning" / "Good afternoon" / "Good evening" for the chapter's time zone. */
+export function greeting(date: Date = new Date()): string {
+  const hour = Number(hourInZone.format(date));
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/** "Friday, November 27" in the chapter's time zone. */
+export function formatWeekdayDate(date: Date = new Date()): string {
+  return weekdayLong.format(date);
+}

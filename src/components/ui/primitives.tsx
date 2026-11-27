@@ -134,12 +134,28 @@ export function EmptyState({
   );
 }
 
+/** Soft tints for initials; each name always gets the same one. */
+const AVATAR_TONES = [
+  "bg-brand-100 text-brand-800 ring-brand-200",
+  "bg-sky-100 text-sky-800 ring-sky-200",
+  "bg-emerald-100 text-emerald-800 ring-emerald-200",
+  "bg-amber-100 text-amber-900 ring-amber-200",
+  "bg-zinc-100 text-zinc-700 ring-zinc-200",
+];
+
+function avatarTone(name: string): string {
+  let hash = 0;
+  for (const char of name.trim().toLowerCase()) hash = (hash * 31 + char.codePointAt(0)!) >>> 0;
+  return AVATAR_TONES[hash % AVATAR_TONES.length];
+}
+
 export function Avatar({ name, className }: { name: string; className?: string }) {
   return (
     <span
       aria-hidden
       className={cn(
-        "inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11.5px] font-semibold text-zinc-600 ring-1 ring-zinc-200 ring-inset",
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[11.5px] font-semibold ring-1 ring-inset",
+        avatarTone(name),
         className,
       )}
     >

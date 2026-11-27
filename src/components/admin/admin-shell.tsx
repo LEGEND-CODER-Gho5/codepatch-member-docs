@@ -27,6 +27,7 @@ import { CompactTitle, useScrolled } from "@/components/ui/large-title";
 import { cn } from "@/lib/cn";
 import type { DepartmentOption, NotificationItem, OrgInfo, PositionOption } from "@/lib/types";
 import { AddMemberDialog } from "./member-dialogs";
+import { CommandPalette } from "./command-palette";
 import { NotificationBell } from "./notification-bell";
 
 type AdminUI = { openAddMember: () => void; departments: DepartmentOption[]; positions: PositionOption[] };
@@ -199,10 +200,11 @@ export function AdminShell({
             </p>
           </CompactTitle>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <LiveIndicator className="hidden sm:inline-flex" />
-            <Button variant="primary" size="sm" onClick={openAddMember}>
+            <LiveIndicator className="hidden xl:inline-flex" />
+            <CommandPalette onAddMember={openAddMember} />
+            <Button variant="primary" size="sm" onClick={openAddMember} aria-label="Add Member">
               <UserPlus />
-              <span>Add Member</span>
+              <span className="hidden sm:inline">Add Member</span>
             </Button>
             <NotificationBell unread={unread} notifications={notifications} />
           </div>
