@@ -280,7 +280,7 @@ export async function getDocumentRecord(documentId: string): Promise<DocumentRec
   let hours: HoursEntry[] = [];
   if (doc.document_type === "member_documentation") {
     const rows = await sql<{ id: string; entry_date: string | null; title: string; details: string; created_at: Date; updated_at: Date }>(
-      "SELECT id, entry_date, title, details, created_at, updated_at FROM contribution_entries WHERE document_id = $1 ORDER BY created_at, id",
+      "SELECT id, entry_date, title, details, created_at, updated_at FROM contribution_entries WHERE document_id = $1 ORDER BY entry_date NULLS LAST, created_at, id",
       [documentId],
     );
     contributions = rows.map((row) => ({
@@ -293,7 +293,7 @@ export async function getDocumentRecord(documentId: string): Promise<DocumentRec
     }));
   } else {
     const rows = await sql<{ id: string; service_date: string | null; description: string; hours: number | null; created_at: Date; updated_at: Date }>(
-      "SELECT id, service_date, description, hours, created_at, updated_at FROM volunteer_hours WHERE document_id = $1 ORDER BY created_at, id",
+      "SELECT id, service_date, description, hours, created_at, updated_at FROM volunteer_hours WHERE document_id = $1 ORDER BY service_date NULLS LAST, created_at, id",
       [documentId],
     );
     hours = rows.map((row) => ({

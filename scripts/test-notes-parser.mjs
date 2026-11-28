@@ -2,6 +2,7 @@
 // written the ways members actually write them. Run: npm run test:notes
 import assert from "node:assert/strict";
 import { findDate, findHours, parseNotes } from "../src/lib/notes-parser.ts";
+import { isInDateOrder, sortByDate } from "../src/lib/entry-order.ts";
 
 const TODAY = "2026-11-27";
 let passed = 0;
@@ -146,6 +147,22 @@ check("name, total, and signature lines are not activities", () => {
 check("empty or meaningless text gives no rows", () => {
   assert.deepEqual(parseNotes("", "hours", TODAY).rows, []);
   assert.deepEqual(parseNotes("   \n\n  ", "hours", TODAY).rows, []);
+});
+
+check("date order: oldest or newest first, undated last, same-day entries keep their order", () => {
+  const rows = [
+    { id: "a", date: "2026-10-12" },
+    { id: "b", date: "" },
+    { id: "c", date: "2026-09-01" },
+    { id: "d", date: "2026-10-12" },
+    { id: "e", date: "2026-11-05" },
+  ];
+  const ids = (list) => list.map((row) => row.id).join("");
+  assert.equal(ids(sortByDate(rows, (row) => row.date, "oldest")), "cadeb");
+  assert.equal(ids(sortByDate(rows, (row) => row.date, "newest")), "eadcb");
+  assert.equal(isInDateOrder(rows, (row) => row.date, "oldest"), false);
+  assert.equal(isInDateOrder(sortByDate(rows, (row) => row.date, "newest"), (row) => row.date, "newest"), true);
+  assert.equal(ids(rows), "abcde", "sorting returns a copy");
 });
 
 console.log(`\n${passed} passed, ${failed} failed.`);

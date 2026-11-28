@@ -117,7 +117,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export function PreferencesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { preferences, reset } = usePreferences();
   const changed = Object.entries(preferences).some(
-    ([key, value]) => key !== "zone" && key !== "clock" && value !== (DEFAULT_PREFERENCES as Record<string, unknown>)[key],
+    ([key, value]) => key !== "zone" && key !== "clock" && key !== "order" && value !== (DEFAULT_PREFERENCES as Record<string, unknown>)[key],
   );
 
   return (

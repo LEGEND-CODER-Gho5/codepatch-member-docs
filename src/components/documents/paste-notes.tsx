@@ -6,7 +6,9 @@ import { createEntriesAction } from "@/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
+import { usePreferences } from "@/components/preferences/preferences-provider";
 import { cn } from "@/lib/cn";
+import { sortByDate } from "@/lib/entry-order";
 import { todayInAppTimeZone } from "@/lib/format";
 import { htmlToNotes, MAX_PASTE_CHARACTERS, parseNotes, type ParsedRow } from "@/lib/notes-parser";
 import { cleanHours, LIMITS } from "@/lib/validation";
@@ -71,6 +73,7 @@ export function PasteNotesButton({
   const area = useRef<HTMLTextAreaElement>(null);
   const textId = useId();
   const hoursRecord = kind === "hours";
+  const { preferences } = usePreferences();
 
   const close = () => {
     if (adding) return;
@@ -95,7 +98,9 @@ export function PasteNotesButton({
 
   const sort = () => {
     const result = parseNotes(text, kind, todayInAppTimeZone());
-    setRows(result.rows.map((row) => ({ ...row, key: crypto.randomUUID() })));
+    // Shown in date order (the same direction the record uses), however the notes were written.
+    const ordered = sortByDate(result.rows, (row) => row.date, preferences.order);
+    setRows(ordered.map((row) => ({ ...row, key: crypto.randomUUID() })));
     setTruncated(result.truncated);
     setError(null);
     setStage("review");

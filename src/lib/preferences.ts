@@ -19,6 +19,8 @@ export const PREFERENCE_OPTIONS = {
   guide: ["off", "on"],
   decor: ["on", "off"],
   clock: ["12", "24"],
+  /** Date order of the entries in a record (src/lib/entry-order.ts). */
+  order: ["oldest", "newest"],
 } as const;
 
 type Options = typeof PREFERENCE_OPTIONS;
@@ -36,6 +38,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   guide: "off",
   decor: "on",
   clock: "12",
+  order: "oldest",
   zone: null,
 };
 

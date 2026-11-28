@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDownUp,
   Check,
   CircleExclamationPoint,
   ClipboardPaste,
@@ -32,6 +33,8 @@ import { VERIFIER_FIELDS, type ActingAs, type DocumentRecord, type EntryKind, ty
 import { VerifiedStamp } from "@/components/ui/seal";
 import { VerificationBar } from "./verification-bar";
 import { PasteNotesButton, type AddedRow } from "./paste-notes";
+import { usePreferences } from "@/components/preferences/preferences-provider";
+import { isInDateOrder, sortByDate, type EntryOrder } from "@/lib/entry-order";
 
 type RowValues = Record<string, string>;
 type LocalRow = { key: string; id: string | null; values: RowValues; error: string | null };
@@ -98,8 +101,12 @@ type Props = {
 
 export function DocumentEditor({ record, member, org, actingAs }: Props) {
   const kind: EntryKind = record.documentType === "member_documentation" ? "contribution" : "hours";
+  // Entries show in date order (oldest or newest first, as this person chose); see src/lib/entry-order.ts.
+  const { preferences, update: updatePreferences } = usePreferences();
+  const order = preferences.order;
+  const dateOf = useCallback((row: LocalRow) => row.values[kind === "hours" ? "service_date" : "entry_date"] ?? "", [kind]);
   const [header, setHeaderState] = useState<Record<HeaderField, string>>(() => ({ ...record.fields }));
-  const [rows, setRowsState] = useState<LocalRow[]>(() => rowsFrom(record));
+  const [rows, setRowsState] = useState<LocalRow[]>(() => sortByDate(rowsFrom(record), dateOf, order));
   const [saveState, setSaveState] = useState<SaveState>({ state: "saved", at: record.updatedAt, error: null });
   const [pendingDelete, setPendingDelete] = useState<LocalRow | null>(null);
 
@@ -245,7 +252,9 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
   const addRow = () => {
     const key = `new-${crypto.randomUUID()}`;
     const values = { ...BLANK_ROW[kind], [kind === "hours" ? "service_date" : "entry_date"]: todayInAppTimeZone() };
-    commitRows([...rowsRef.current, { key, id: null, values, error: null }]);
+    const row = { key, id: null, values, error: null };
+    // A new row is dated today, so it belongs at the newest end of the record.
+    commitRows(order === "newest" ? [row, ...rowsRef.current] : [...rowsRef.current, row]);
     dirtyRows.current.add(key);
     focusTarget.current = key;
     schedule();
@@ -256,11 +265,61 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
     const present = new Set(rowsRef.current.map((row) => row.id).filter(Boolean));
     const kept = rowsRef.current.filter((row) => row.id || !isBlank(row.values));
     for (const row of rowsRef.current) if (!row.id && isBlank(row.values)) dirtyRows.current.delete(row.key);
-    commitRows([
+    const next = [
       ...kept,
       ...added.filter((row) => !present.has(row.id)).map((row) => ({ key: row.id, id: row.id, values: { ...BLANK_ROW[kind], ...row.values }, error: null })),
-    ]);
+    ];
+    // Pasted rows go into their places by date, and the rest of the record is put in order with them.
+    commitRows(sortByDate(next, dateOf, order));
   };
+
+  /** Puts the entries in date order, and remembers the direction on this device. */
+  const sortRows = (direction: EntryOrder) => {
+    commitRows(sortByDate(rowsRef.current, dateOf, direction));
+    if (direction !== order) updatePreferences({ order: direction });
+  };
+  const inOrder = isInDateOrder(rows, dateOf, order);
+
+  const orderBar =
+    rows.length > 1 ? (
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 print:hidden">
+        <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-zinc-500">
+          <ArrowDownUp className="size-3.5" aria-hidden />
+          Date order
+        </span>
+        <div role="radiogroup" aria-label="Date order" className="inline-flex rounded-md bg-zinc-100 p-0.5">
+          {(
+            [
+              ["oldest", "Oldest first"],
+              ["newest", "Newest first"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={order === value}
+              onClick={() => sortRows(value)}
+              className={cn(
+                "rounded px-2.5 py-1 text-[12.5px] font-medium transition-colors",
+                order === value ? "bg-surface text-zinc-900 shadow-panel ring-1 ring-zinc-200" : "text-zinc-600 hover:text-zinc-900",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {!inOrder && (
+          <button
+            type="button"
+            onClick={() => sortRows(order)}
+            className="rounded-md px-2 py-1 text-[12.5px] font-medium text-brand-700 ring-1 ring-brand-200 transition-colors hover:bg-brand-50"
+          >
+            Not in date order: sort now
+          </button>
+        )}
+      </div>
+    ) : null;
 
   const pasteNotes = (props: { className?: string; label?: string; trigger?: (open: () => void) => ReactNode }) => (
     <PasteNotesButton
@@ -526,6 +585,8 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                   })}
                 </div>
               ) : (
+                <>
+                {orderBar}
                 <ol className="space-y-3">
                   {rows.map((row, index) => (
                     <li
@@ -578,6 +639,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                     </li>
                   ))}
                 </ol>
+                </>
               )}
               {rows.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2 print:hidden">
@@ -644,6 +706,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
 
             <section className="mt-8" aria-label="Volunteer Hours">
               <h3 className="mb-3 text-[16px] font-normal text-zinc-500">{PDF_TEXT.volunteerHours.sectionTitle}</h3>
+              {orderBar}
               <div className="relative overflow-x-auto rounded-md border border-zinc-300">
                 <table className="w-full min-w-[560px] border-collapse text-[13.5px]">
                   <thead>
