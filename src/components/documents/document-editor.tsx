@@ -3,6 +3,7 @@
 import {
   Check,
   CircleExclamationPoint,
+  ClipboardPaste,
   Copy,
   ExternalLink,
   FileDown,
@@ -35,6 +36,10 @@ import { PasteNotesButton, type AddedRow } from "./paste-notes";
 type RowValues = Record<string, string>;
 type LocalRow = { key: string; id: string | null; values: RowValues; error: string | null };
 type SaveState = { state: "saved" | "dirty" | "saving" | "error"; at: string; error: string | null };
+
+/** A large, dashed choice for an empty Member Documentation record. */
+const EMPTY_CHOICE =
+  "flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-zinc-300 px-6 text-center text-zinc-500 transition-colors hover:border-brand-300 hover:bg-brand-50/30 hover:text-brand-800";
 
 const BLANK_ROW: Record<EntryKind, RowValues> = {
   contribution: { entry_date: "", title: "", details: "" },
@@ -257,7 +262,7 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
     ]);
   };
 
-  const pasteNotes = (props: { className?: string; label?: string }) => (
+  const pasteNotes = (props: { className?: string; label?: string; trigger?: (open: () => void) => ReactNode }) => (
     <PasteNotesButton
       documentId={record.id}
       kind={kind}
@@ -501,19 +506,24 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                 {CONTRIBUTION_GUIDANCE}
               </p>
               {rows.length === 0 ? (
-                <button
-                  type="button"
-                  onClick={addRow}
-                  className="flex min-h-[260px] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-zinc-300 text-[13.5px] text-zinc-500 transition-colors hover:border-brand-300 hover:bg-brand-50/30 hover:text-brand-800"
-                >
-                  <Plus className="size-5" />
-                  Add your first contribution
-                </button>
-              ) : null}
-              {rows.length === 0 ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-500">
-                  Already wrote it down somewhere?
-                  {pasteNotes({})}
+                // Two ways to start, side by side: type the first entry, or paste notes written elsewhere.
+                <div className="grid gap-3 sm:grid-cols-2 print:hidden">
+                  <button type="button" onClick={addRow} className={EMPTY_CHOICE}>
+                    <Plus className="size-5" />
+                    <span className="text-[14px] font-medium text-zinc-800">Add your first contribution</span>
+                    <span className="max-w-[30ch] text-[12.5px] leading-snug">Type it in here, one entry at a time.</span>
+                  </button>
+                  {pasteNotes({
+                    trigger: (open) => (
+                      <button type="button" onClick={open} className={EMPTY_CHOICE}>
+                        <ClipboardPaste className="size-5" />
+                        <span className="text-[14px] font-medium text-zinc-800">Paste your notes</span>
+                        <span className="max-w-[30ch] text-[12.5px] leading-snug">
+                          Already wrote it in a Google Doc or a list? Paste it and it&rsquo;s sorted into entries for you to check.
+                        </span>
+                      </button>
+                    ),
+                  })}
                 </div>
               ) : (
                 <ol className="space-y-3">
@@ -657,6 +667,9 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                       <tr>
                         <td colSpan={4} className="px-3 py-8 text-center text-[13px] text-zinc-500">
                           No volunteer hours recorded yet.
+                          <span className="mt-1 block text-[12.5px] print:hidden">
+                            Add a row below, or use <span className="font-medium text-zinc-700">Paste your notes</span> to fill in many at once.
+                          </span>
                         </td>
                       </tr>
                     )}

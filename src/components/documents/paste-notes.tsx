@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, ClipboardPaste, LoaderCircle, Rows3, X } from "lucide-react";
-import { useId, useRef, useState, type ClipboardEvent } from "react";
+import { useId, useRef, useState, type ClipboardEvent, type ReactNode } from "react";
 import { createEntriesAction } from "@/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -49,6 +49,7 @@ export function PasteNotesButton({
   onAdded,
   className,
   label = "Paste your notes",
+  trigger,
 }: {
   documentId: string;
   kind: EntryKind;
@@ -57,6 +58,8 @@ export function PasteNotesButton({
   onAdded: (rows: AddedRow[]) => void;
   className?: string;
   label?: string;
+  /** Draws the opener instead of the standard button (for example, a large card). */
+  trigger?: (open: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [stage, setStage] = useState<"paste" | "review">("paste");
@@ -135,10 +138,14 @@ export function PasteNotesButton({
 
   return (
     <>
-      <Button size="sm" variant="secondary" className={className} onClick={() => setOpen(true)}>
-        <ClipboardPaste />
-        {label}
-      </Button>
+      {trigger ? (
+        trigger(() => setOpen(true))
+      ) : (
+        <Button size="sm" variant="secondary" className={className} onClick={() => setOpen(true)}>
+          <ClipboardPaste />
+          {label}
+        </Button>
+      )}
       <Dialog
         open={open}
         onClose={close}
