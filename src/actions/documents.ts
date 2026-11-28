@@ -357,6 +357,92 @@ export async function createEntryAction(input: {
   }
 }
 
+/** The most rows one "Paste your notes" can add. */
+const MAX_BATCH_ENTRIES = 200;
+
+/**
+ * Adds many entries at once, from "Paste your notes": all or none, in one
+ * transaction. Each entry gets its own Edit History record (so any one can be
+ * reviewed or restored), but the administrator gets one notification for the
+ * whole paste instead of one per row.
+ */
+export async function createEntriesAction(input: {
+  documentId: string;
+  kind: EntryKind;
+  actingAs: ActingAs;
+  entries: Record<string, unknown>[];
+}): Promise<ActionResult<{ ids: string[] }>> {
+  try {
+    if (!input || !isUuid(input.documentId) || !isEntryKind(input.kind) || !isActingAs(input.actingAs) || !Array.isArray(input.entries)) {
+      return fail("Invalid request.", "invalid");
+    }
+    if (input.entries.length === 0) return fail("There is nothing to add.", "invalid");
+    if (input.entries.length > MAX_BATCH_ENTRIES) return fail(`Add at most ${MAX_BATCH_ENTRIES} entries at a time.`, "invalid");
+    const config = ENTRY_CONFIG[input.kind];
+    const doc = await sqlOne<{ member_id: string; document_type: DocumentType }>(
+      "SELECT member_id, document_type FROM member_documentation WHERE id = $1",
+      [input.documentId],
+    );
+    if (!doc) return fail("This document no longer exists.", "not_found");
+    if (doc.document_type !== config.documentType) return fail("Invalid entry type for this document.", "invalid");
+    const actor = await getActorFor(input.actingAs, doc.member_id);
+    if (!actor) return UNAUTHORIZED;
+
+    const rows: EntryValues[] = [];
+    for (const [index, entry] of input.entries.entries()) {
+      const values = validateEntry(input.kind, entry);
+      if (!values.ok) return fail(`Row ${index + 1}: ${values.error}`, "invalid");
+      rows.push(values.value);
+    }
+
+    const ids = await withTransaction(async (tx) => {
+      const member = await loadMemberRef(tx, doc.member_id);
+      const documentLabel = DOCUMENT_TYPE_LABEL[doc.document_type];
+      const columns = config.fields.join(", ");
+      const placeholders = config.fields.map((_, index) => `$${index + 3}`).join(", ");
+      const created: string[] = [];
+      for (const [index, values] of rows.entries()) {
+        const [row] = await tx.query<Record<string, unknown> & { id: string }>(
+          `INSERT INTO ${config.table} (document_id, member_id, ${columns})
+           VALUES ($1, $2, ${placeholders})
+           RETURNING *`,
+          [input.documentId, doc.member_id, ...config.fields.map((field) => values[field])],
+        );
+        const last = index === rows.length - 1;
+        const what = rows.length === 1 ? `a ${config.label}` : `${rows.length} ${config.label.replace(/entry$/, "entries")}`;
+        await recordAudit(tx, {
+          actor,
+          member,
+          action: "created",
+          entityType: config.entity,
+          documentType: doc.document_type,
+          documentId: input.documentId,
+          recordId: row.id,
+          summary: `Added ${config.label}`,
+          next: entrySnapshot(input.kind, row),
+          notification: last
+            ? memberNotice(
+                actor,
+                member,
+                input.kind === "hours" ? "hours.created" : "documentation.created",
+                `${member?.fullName} added ${what} to their ${documentLabel} from pasted notes.`,
+                documentLink(doc.member_id, input.documentId, doc.document_type),
+              )
+            : null,
+          realtime: last ? ["member"] : [],
+        });
+        created.push(row.id);
+      }
+      await touchDocument(tx, input.documentId, actor);
+      await clearVerificationAfterMemberChange(tx, actor, input.documentId, member);
+      return created;
+    });
+    return { ok: true, data: { ids } };
+  } catch (error) {
+    return handleActionError(error, "createEntries");
+  }
+}
+
 async function loadEntry(kind: EntryKind, entryId: string) {
   const config = ENTRY_CONFIG[kind];
   return sqlOne<{ id: string; document_id: string; member_id: string; document_type: DocumentType }>(

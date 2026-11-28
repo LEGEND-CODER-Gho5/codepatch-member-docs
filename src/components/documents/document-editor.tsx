@@ -30,6 +30,7 @@ import { cleanHours, LIMITS } from "@/lib/validation";
 import { VERIFIER_FIELDS, type ActingAs, type DocumentRecord, type EntryKind, type HeaderField, type OrgInfo, type WorkspaceMember } from "@/lib/types";
 import { VerifiedStamp } from "@/components/ui/seal";
 import { VerificationBar } from "./verification-bar";
+import { PasteNotesButton, type AddedRow } from "./paste-notes";
 
 type RowValues = Record<string, string>;
 type LocalRow = { key: string; id: string | null; values: RowValues; error: string | null };
@@ -244,6 +245,28 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
     focusTarget.current = key;
     schedule();
   };
+
+  /** Rows already saved by "Paste your notes": shown at once, in place of any untouched blank row. */
+  const addSavedRows = (added: AddedRow[]) => {
+    const present = new Set(rowsRef.current.map((row) => row.id).filter(Boolean));
+    const kept = rowsRef.current.filter((row) => row.id || !isBlank(row.values));
+    for (const row of rowsRef.current) if (!row.id && isBlank(row.values)) dirtyRows.current.delete(row.key);
+    commitRows([
+      ...kept,
+      ...added.filter((row) => !present.has(row.id)).map((row) => ({ key: row.id, id: row.id, values: { ...BLANK_ROW[kind], ...row.values }, error: null })),
+    ]);
+  };
+
+  const pasteNotes = (props: { className?: string; label?: string }) => (
+    <PasteNotesButton
+      documentId={record.id}
+      kind={kind}
+      actingAs={actingAs}
+      verified={Boolean(record.verification)}
+      onAdded={addSavedRows}
+      {...props}
+    />
+  );
 
   const removeLocalRow = (key: string) => {
     dirtyRows.current.delete(key);
@@ -486,6 +509,12 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                   <Plus className="size-5" />
                   Add your first contribution
                 </button>
+              ) : null}
+              {rows.length === 0 ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-500">
+                  Already wrote it down somewhere?
+                  {pasteNotes({})}
+                </div>
               ) : (
                 <ol className="space-y-3">
                   {rows.map((row, index) => (
@@ -541,10 +570,13 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                 </ol>
               )}
               {rows.length > 0 && (
-                <Button size="sm" className="mt-3" onClick={addRow}>
-                  <Plus />
-                  Add contribution entry
-                </Button>
+                <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+                  <Button size="sm" onClick={addRow}>
+                    <Plus />
+                    Add contribution entry
+                  </Button>
+                  {pasteNotes({})}
+                </div>
               )}
             </section>
 
@@ -641,10 +673,13 @@ export function DocumentEditor({ record, member, org, actingAs }: Props) {
                   </tbody>
                 </table>
               </div>
-              <Button size="sm" className="mt-3" onClick={addRow}>
-                <Plus />
-                Add row
-              </Button>
+              <div className="mt-3 flex flex-wrap gap-2 print:hidden">
+                <Button size="sm" onClick={addRow}>
+                  <Plus />
+                  Add row
+                </Button>
+                {pasteNotes({})}
+              </div>
 
               <div className="mt-7 flex flex-wrap items-baseline gap-2 text-[14px]">
                 <span className="font-bold text-zinc-950">{PDF_TEXT.volunteerHours.total}</span>

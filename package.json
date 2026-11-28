@@ -20,6 +20,7 @@
     "test:audit": "node --no-warnings scripts/test-audit-immutability.mjs",
     "test:backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-backup.mjs",
     "test:db-config": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-database-config.mjs",
+    "test:notes": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-notes-parser.mjs",
     "test:migrations": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-migrations.mjs",
     "test:target-safety": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-target-safety.mjs"
   },
