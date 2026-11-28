@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { memberLogoutAction } from "@/actions/auth";
+import { ChangePasswordButton } from "@/components/change-password";
 import { DocumentWorkspace } from "@/components/documents/workspace";
 import { LiveRefresh } from "@/components/realtime";
 import { SeasonBanner } from "@/components/season/season-banner";
@@ -67,12 +68,15 @@ export default async function MemberWorkspacePage({
               </p>
             </div>
           </div>
-          <form action={memberLogoutAction}>
-            <Button type="submit" size="sm">
-              <LogOut />
-              Sign out of documentation
-            </Button>
-          </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <ChangePasswordButton memberId={member.id} memberName={member.fullName} />
+            <form action={memberLogoutAction}>
+              <Button type="submit" size="sm">
+                <LogOut />
+                Sign out of documentation
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
       <main className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 print:max-w-none print:p-0">

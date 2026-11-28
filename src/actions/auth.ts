@@ -2,12 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { sql, sqlOne, withTransaction } from "@/lib/server/db";
-import { acceptSiteRules, endSession, getClientInfo, getViewer, startSession } from "@/lib/server/auth";
+import { acceptSiteRules, endSession, getActorFor, getClientInfo, getViewer, startSession } from "@/lib/server/auth";
 import { getSettings } from "@/lib/server/settings";
-import { verifyPassword } from "@/lib/server/security";
+import { hashPassword, verifyPassword } from "@/lib/server/security";
 import { checkLoginThrottle, failureDelay, recordLoginAttempt } from "@/lib/server/rate-limit";
 import { loadMemberRef, recordAudit } from "@/lib/server/audit";
-import { isUuid } from "@/lib/validation";
+import type { ActionResult } from "@/lib/types";
+import { isUuid, MEMBER_PASSWORD_MIN_LENGTH } from "@/lib/validation";
+import { fail, handleActionError, UNAUTHORIZED } from "./shared";
 
 export type LoginState = { error: string | null };
 
@@ -121,6 +123,99 @@ export async function memberLoginAction(_previous: LoginState, formData: FormDat
   await sql("UPDATE member_credentials SET last_login_at = now() WHERE member_id = $1", [memberId]);
   await startSession("member", member.password_version, memberId);
   redirect(`/members/${memberId}`);
+}
+
+/**
+ * A signed-in member changes their own documentation password. Only the
+ * password changes: records, hours, and verification are untouched, and the
+ * administrator never needs member passwords (records open from the admin
+ * dashboard). The current password is required and counts toward the same
+ * sign-in lock as the sign-in page. Other sessions for this member end; this
+ * device stays signed in. Edit History records it and the administrator is
+ * notified. If a member forgets it, Reset password still issues a new one.
+ */
+export async function changeMemberPasswordAction(input: {
+  memberId: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<ActionResult<null>> {
+  try {
+    if (!input || !isUuid(input.memberId)) return fail("Invalid request.", "invalid");
+    const memberId = input.memberId;
+    // Only the member themselves, signed in to their documentation.
+    const actor = await getActorFor("member", memberId);
+    if (!actor) return UNAUTHORIZED;
+
+    const member = await sqlOne<{ status: string; password_hash: string }>(
+      `SELECT m.status, c.password_hash
+         FROM members m JOIN member_credentials c ON c.member_id = m.id
+        WHERE m.id = $1`,
+      [memberId],
+    );
+    if (!member || member.status !== "active") return fail("This member account is not active.", "invalid");
+
+    const { ip } = await getClientInfo();
+    const throttle = await checkLoginThrottle("member", memberId, ip);
+    if (!throttle.allowed) return fail(lockedMessage(throttle.retryAfterMinutes), "invalid");
+
+    const current = typeof input.currentPassword === "string" ? input.currentPassword : "";
+    const valid = current.length > 0 && current.length <= 200 && (await verifyPassword(current, member.password_hash));
+    if (!valid) {
+      await recordLoginAttempt("member", memberId, ip, false);
+      await failureDelay();
+      return fail("Your current password is incorrect.", "invalid");
+    }
+
+    const next = typeof input.newPassword === "string" ? input.newPassword : "";
+    if (next.length < MEMBER_PASSWORD_MIN_LENGTH) return fail(`Your new password must be at least ${MEMBER_PASSWORD_MIN_LENGTH} characters.`, "invalid");
+    if (next.length > 200) return fail("Your new password must be 200 characters or fewer.", "invalid");
+    if (next !== input.confirmPassword) return fail("The two new passwords do not match.", "invalid");
+    if (next === current) return fail("Choose a password that is different from your current one.", "invalid");
+    if (/^(.)\1+$/.test(next) || /^(?:0?123456789?0?|password\d*|codepatch\w*)$/i.test(next)) {
+      return fail("That password is too easy to guess. Try a short phrase only you would know.", "invalid");
+    }
+    // Never the shared chapter password (everyone in the chapter knows it) or the administrator password.
+    const settings = await getSettings();
+    if (settings && ((await verifyPassword(next, settings.site_password_hash)) || (await verifyPassword(next, settings.admin_password_hash)))) {
+      return fail("Your password can't be the shared chapter password. Choose one only you know.", "invalid");
+    }
+
+    const hash = await hashPassword(next);
+    const version = await withTransaction(async (tx) => {
+      const [row] = await tx.query<{ password_version: number }>(
+        `UPDATE member_credentials
+            SET password_hash = $2, password_version = password_version + 1, password_changed_at = now()
+          WHERE member_id = $1
+          RETURNING password_version`,
+        [memberId, hash],
+      );
+      // Sign-ins on other devices end; this one gets a fresh session below.
+      await tx.query("DELETE FROM sessions WHERE member_id = $1", [memberId]);
+      await tx.query("DELETE FROM login_attempts WHERE scope = 'member' AND target = $1", [memberId]);
+      const ref = await loadMemberRef(tx, memberId);
+      await recordAudit(tx, {
+        actor,
+        member: ref,
+        action: "password_reset",
+        entityType: "member",
+        recordId: memberId,
+        summary: "Changed their own documentation password",
+        next: { password: "Changed by the member (not stored in readable form)" },
+        notification: {
+          type: "member.password_reset",
+          description: `${ref?.fullName ?? "A member"} changed their documentation password.`,
+          link: `/admin/members/${memberId}`,
+        },
+        realtime: ["member"],
+      });
+      return row.password_version;
+    });
+    await startSession("member", version, memberId);
+    return { ok: true, data: null };
+  } catch (error) {
+    return handleActionError(error, "changeMemberPassword");
+  }
 }
 
 /* --------------------------- C. Administrator password ------------------------ */

@@ -19,6 +19,9 @@ export const LIMITS = {
   chapterName: 160,
 } as const;
 
+/** The shortest documentation password a member may choose for themselves. */
+export const MEMBER_PASSWORD_MIN_LENGTH = 8;
+
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 // Strips control characters other than tab/newline so stored text stays printable.

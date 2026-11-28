@@ -37,8 +37,10 @@ database is initialized.
 | System | Grants | Changed in | Effect of changing it |
 | --- | --- | --- | --- |
 | Shared website password | Member directory only | Settings | Signs out directory-only sessions. Member and admin passwords untouched. |
-| Member password (one per member) | That member's own two documents | Member Management / Settings → Reset | Signs out that member only, clears their sign-in lock. |
+| Member password (one per member) | That member's own two documents | The member: **Change password** on their documentation page (requires their current password; at least 8 characters; never the shared website or administrator password). The administrator: Member Management → Reset password issues a new one. | Signs out that member's other sessions and clears their sign-in lock; the member changing it stays signed in on that device. Records are untouched. Edit History records it and the administrator is notified. Wrong current passwords count toward the same sign-in lock. |
 | Administrator password | Everything, without member passwords | Settings (requires current password) | Signs out other admin sessions; current admin stays signed in. |
+
+While signed in as administrator, choosing a member in the member directory opens their records in the dashboard directly; no member password is ever needed.
 
 All three are verified on the server, stored only as scrypt hashes, and versioned so a change revokes existing sessions of that kind.
 

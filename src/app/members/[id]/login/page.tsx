@@ -1,11 +1,10 @@
-import { ArrowLeft, LayoutDashboard, Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { memberLoginAction } from "@/actions/auth";
 import { PasswordLoginForm } from "@/components/password-login-form";
 import { SiteHeader } from "@/components/site-header";
-import { buttonStyles } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/primitives";
 import { formatDepartments } from "@/lib/format";
 import { requireSiteAccess } from "@/lib/server/auth";
@@ -20,6 +19,8 @@ export default async function MemberLoginPage({ params }: { params: Promise<{ id
   if (!isUuid(id)) notFound();
   const viewer = await requireSiteAccess();
   if (viewer.member?.id === id) redirect(`/members/${id}`);
+  // The administrator never needs a member's password: their records open in the dashboard.
+  if (viewer.admin) redirect(`/admin/documentation/${id}`);
   const member = await getWorkspaceMember(id);
   if (!member || member.status !== "active") notFound();
   const org = await getOrgInfo();
@@ -53,19 +54,10 @@ export default async function MemberLoginPage({ params }: { params: Promise<{ id
                 label="Personal password"
                 submitLabel="Open my documentation"
                 hidden={{ memberId: member.id }}
-                footer="Your password was issued by the chapter administrator, who can reset it if needed."
+                footer="After you sign in, you can change your password with Change password. If you forget it, ask the chapter administrator to reset it."
               />
             </div>
           </div>
-          {viewer.admin && (
-            <Link
-              href={`/admin/documentation/${member.id}`}
-              className={buttonStyles({ variant: "secondary", size: "sm", className: "mt-4 w-full" })}
-            >
-              <LayoutDashboard />
-              Open as administrator
-            </Link>
-          )}
         </div>
       </main>
     </div>
